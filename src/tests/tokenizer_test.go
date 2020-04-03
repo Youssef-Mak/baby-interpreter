@@ -40,8 +40,7 @@ func TestSymTokenizer(t *testing.T) {
 }
 
 func TestSynTokenizer(t *testing.T) {
-	input := `
-	let five = 5;
+	input := `let five = 5;
 	let ten = 10;
 	let add = fn(x, y) {
 	x + y;
@@ -57,6 +56,7 @@ func TestSynTokenizer(t *testing.T) {
 		{token.IDENTIF, "five"},
 		{token.ASSIGN, "="},
 		{token.INT, "5"},
+		{token.SEMICOLON, ";"},
 		{token.LET, "let"},
 		{token.IDENTIF, "ten"},
 		{token.ASSIGN, "="},
