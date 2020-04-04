@@ -27,10 +27,26 @@ func (l *Tokenizer) NextToken() token.Token {
 		tok = newToken(token.ASSIGN, l.ch)
 	case '+':
 		tok = newToken(token.PLUS, l.ch)
-	case ';':
-		tok = newToken(token.SEMICOLON, l.ch)
+	case '-':
+		tok = newToken(token.MINUS, l.ch)
+	case '/':
+		tok = newToken(token.SLASH, l.ch)
+	case '*':
+		tok = newToken(token.ASTERIX, l.ch)
+	case '!':
+		tok = newToken(token.NOT, l.ch)
+	case '>':
+		tok = newToken(token.GREATERTHAN, l.ch)
+	case '<':
+		tok = newToken(token.LESSTHAN, l.ch)
+	case '&':
+		tok = newToken(token.AND, l.ch)
+	case '|':
+		tok = newToken(token.OR, l.ch)
 	case ',':
 		tok = newToken(token.COMMA, l.ch)
+	case ';':
+		tok = newToken(token.SEMICOLON, l.ch)
 	case '(':
 		tok = newToken(token.LPAREN, l.ch)
 	case ')':
