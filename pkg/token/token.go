@@ -21,6 +21,8 @@ const (
 	GREATERTHAN TokenType = ">"
 	AND         TokenType = "&"
 	OR          TokenType = "|"
+	EQUALS      TokenType = "=="
+	NOTEQUALS   TokenType = "!="
 	TRUE        TokenType = "TRUE"
 	FALSE       TokenType = "FALSE"
 	// Delimiters

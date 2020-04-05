@@ -13,96 +13,114 @@ type Tokenizer struct {
 }
 
 func New(input string) *Tokenizer {
-	l := &Tokenizer{input: input}
-	l.readChar()
-	return l
+	t := &Tokenizer{input: input}
+	t.readChar()
+	return t
 }
 
-func (l *Tokenizer) NextToken() token.Token {
+func (t *Tokenizer) NextToken() token.Token {
 	var tok token.Token
-	l.consumeWhitespace()
+	t.consumeWhitespace()
 
-	switch l.ch {
-	case '=':
-		tok = newToken(token.ASSIGN, l.ch)
+	switch t.ch {
 	case '+':
-		tok = newToken(token.PLUS, l.ch)
+		tok = newToken(token.PLUS, t.ch)
 	case '-':
-		tok = newToken(token.MINUS, l.ch)
+		tok = newToken(token.MINUS, t.ch)
 	case '/':
-		tok = newToken(token.SLASH, l.ch)
+		tok = newToken(token.SLASH, t.ch)
 	case '*':
-		tok = newToken(token.ASTERIX, l.ch)
+		tok = newToken(token.ASTERIX, t.ch)
+	case '=':
+		if t.peekChar() == '=' {
+			t.readChar()
+			tok = token.Token{Type: token.EQUALS, Literal: "=="}
+		} else {
+			tok = newToken(token.ASSIGN, t.ch)
+		}
 	case '!':
-		tok = newToken(token.NOT, l.ch)
+		if t.peekChar() == '=' {
+			t.readChar()
+			tok = token.Token{Type: token.NOTEQUALS, Literal: "!="}
+		} else {
+			tok = newToken(token.NOT, t.ch)
+		}
 	case '>':
-		tok = newToken(token.GREATERTHAN, l.ch)
+		tok = newToken(token.GREATERTHAN, t.ch)
 	case '<':
-		tok = newToken(token.LESSTHAN, l.ch)
+		tok = newToken(token.LESSTHAN, t.ch)
 	case '&':
-		tok = newToken(token.AND, l.ch)
+		tok = newToken(token.AND, t.ch)
 	case '|':
-		tok = newToken(token.OR, l.ch)
+		tok = newToken(token.OR, t.ch)
 	case ',':
-		tok = newToken(token.COMMA, l.ch)
+		tok = newToken(token.COMMA, t.ch)
 	case ';':
-		tok = newToken(token.SEMICOLON, l.ch)
+		tok = newToken(token.SEMICOLON, t.ch)
 	case '(':
-		tok = newToken(token.LPAREN, l.ch)
+		tok = newToken(token.LPAREN, t.ch)
 	case ')':
-		tok = newToken(token.RPAREN, l.ch)
+		tok = newToken(token.RPAREN, t.ch)
 	case '{':
-		tok = newToken(token.LBRACE, l.ch)
+		tok = newToken(token.LBRACE, t.ch)
 	case '}':
-		tok = newToken(token.RBRACE, l.ch)
+		tok = newToken(token.RBRACE, t.ch)
 	case 0:
 		tok.Literal = ""
 		tok.Type = token.EOF
 	default:
-		if isLetter(l.ch) {
-			tok.Literal = l.readIdentifier()
+		if isLetter(t.ch) {
+			tok.Literal = t.readIdentifier()
 			tok.Type = token.IdentLookUp(tok.Literal)
 			return tok
-		} else if isDigit(l.ch) {
-			tok.Literal = l.readNumber()
+		} else if isDigit(t.ch) {
+			tok.Literal = t.readNumber()
 			tok.Type = token.INT
 			return tok
 		} else {
-			tok = newToken(token.ILLEGAL, l.ch)
+			tok = newToken(token.ILLEGAL, t.ch)
 		}
 	}
 
-	l.readChar()
+	t.readChar()
 	return tok
 }
 
-// Fully reads Identifier
-func (l *Tokenizer) readIdentifier() string {
-	position := l.position
-	for isLetter(l.ch) {
-		l.readChar()
+func (t *Tokenizer) peekChar() byte {
+	if t.readPosition > len(t.input) {
+		return 0
+	} else {
+		return t.input[t.readPosition]
 	}
-	return l.input[position:l.position]
+}
+
+// Fully reads Identifier
+func (t *Tokenizer) readIdentifier() string {
+	position := t.position
+	for isLetter(t.ch) {
+		t.readChar()
+	}
+	return t.input[position:t.position]
 }
 
 // Fully reads number
-func (l *Tokenizer) readNumber() string {
-	position := l.position
-	for isDigit(l.ch) {
-		l.readChar()
+func (t *Tokenizer) readNumber() string {
+	position := t.position
+	for isDigit(t.ch) {
+		t.readChar()
 	}
-	return l.input[position:l.position]
+	return t.input[position:t.position]
 }
 
 // Reads next character of input
-func (l *Tokenizer) readChar() {
-	if l.readPosition >= len(l.input) {
-		l.ch = 0 // ASCII code for NUL character (EOF)
+func (t *Tokenizer) readChar() {
+	if t.readPosition >= len(t.input) {
+		t.ch = 0 // ASCII code for NUt character (EOF)
 	} else {
-		l.ch = l.input[l.readPosition]
+		t.ch = t.input[t.readPosition]
 	}
-	l.position = l.readPosition
-	l.readPosition += 1
+	t.position = t.readPosition
+	t.readPosition += 1
 }
 
 // Initializes new Token
@@ -122,9 +140,9 @@ func isDigit(ch byte) bool {
 	return match
 }
 
-// Skips all whitespaces until new char is read
-func (l *Tokenizer) consumeWhitespace() {
-	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
-		l.readChar()
+// Skips alt whitespaces untit new char is read
+func (t *Tokenizer) consumeWhitespace() {
+	for t.ch == ' ' || t.ch == '\t' || t.ch == '\n' || t.ch == '\r' {
+		t.readChar()
 	}
 }
