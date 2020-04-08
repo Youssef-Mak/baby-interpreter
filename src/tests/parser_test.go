@@ -19,6 +19,7 @@ func TestLets(t *testing.T) {
 	parser := parser.New(tokenizer)
 
 	program := parser.ParseProgram()
+	checkErrors(t, parser)
 
 	if program == nil {
 		t.Fatalf("ParseProgram() returned nil")
@@ -46,6 +47,33 @@ func TestLets(t *testing.T) {
 
 }
 
+func TestReturnStatements(t *testing.T) {
+	input := `
+	return 5;
+	return 10;
+	return 993322;
+	`
+	tokenizer := tokenizer.New(input)
+	parser := parser.New(tokenizer)
+	program := parser.ParseProgram()
+	checkErrors(t, parser)
+	if len(program.Statements) != 3 {
+		t.Fatalf("program.Statements does not contain 3 statements. got=%d",
+			len(program.Statements))
+	}
+	for _, stmt := range program.Statements {
+		returnStmt, ok := stmt.(*ast.ReturnStatement)
+		if !ok {
+			t.Errorf("stmt not *ast.ReturnStatement. got=%T", stmt)
+			continue
+		}
+		if returnStmt.TokenLiteral() != "return" {
+			t.Errorf("returnStmt.TokenLiteral not 'return', got %q",
+				returnStmt.TokenLiteral())
+		}
+	}
+}
+
 func testLet(t *testing.T, s ast.Statement, name string) bool {
 	if s.TokenLiteral() != "let" {
 		t.Errorf("s.TokenLiteral not 'let'. got=%q", s.TokenLiteral())
@@ -67,4 +95,17 @@ func testLet(t *testing.T, s ast.Statement, name string) bool {
 	}
 	return true
 
+}
+
+func checkErrors(t *testing.T, p *parser.Parser) {
+	errors := p.GetErrors()
+	if len(errors) == 0 {
+		return
+	}
+
+	t.Errorf("Parser encountered %d errors", len(errors))
+	for _, errMsg := range errors {
+		t.Errorf("parser error %q", errMsg)
+	}
+	t.FailNow()
 }

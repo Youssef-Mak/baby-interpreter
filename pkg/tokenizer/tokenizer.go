@@ -115,7 +115,7 @@ func (t *Tokenizer) readNumber() string {
 // Reads next character of input
 func (t *Tokenizer) readChar() {
 	if t.readPosition >= len(t.input) {
-		t.ch = 0 // ASCII code for NUt character (EOF)
+		t.ch = 0 // ASCII code for NUL character (EOF)
 	} else {
 		t.ch = t.input[t.readPosition]
 	}
