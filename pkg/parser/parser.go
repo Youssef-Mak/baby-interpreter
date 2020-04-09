@@ -7,23 +7,54 @@ import (
 	"github.com/Youssef-Mak/baby-interpreter/pkg/tokenizer"
 )
 
+const (
+	_ int = iota
+	LOWEST
+	EQUALS      // ==
+	LESSGREATER // < or >
+	SUM         // +
+	PRODUCT     // *
+	PREFIX      // !x or -x
+	FUNCALL     // func(x)
+)
+
 type Parser struct {
 	tokenizer *tokenizer.Tokenizer
+	errors    []string
 
 	currentToken token.Token
 	peekToken    token.Token
 
-	errors []string
+	prefixParseFuncs map[token.TokenType]prefixParseFunc
+	infixParseFuncs  map[token.TokenType]infixParseFunc
 }
+
+type (
+	prefixParseFunc func() ast.Expression
+	infixParseFunc  func(ast.Expression) ast.Expression
+)
 
 func New(tokenizer *tokenizer.Tokenizer) *Parser {
 	p := &Parser{tokenizer: tokenizer, errors: []string{}}
+
+	p.prefixParseFuncs = make(map[token.TokenType]prefixParseFunc)
+	p.addPrefix(token.IDENTIF, p.parseIdentifier)
+
+	p.infixParseFuncs = make(map[token.TokenType]infixParseFunc)
 
 	// Read tokens in pairs, so currToken and peekToken are both set
 	p.nextToken()
 	p.nextToken()
 
 	return p
+}
+
+func (p *Parser) addPrefix(tokenType token.TokenType, fn prefixParseFunc) {
+	p.prefixParseFuncs[tokenType] = fn
+}
+
+func (p *Parser) addInfix(tokenType token.TokenType, fn infixParseFunc) {
+	p.infixParseFuncs[tokenType] = fn
 }
 
 func (p *Parser) nextToken() {
@@ -91,6 +122,34 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	return retStatement
 }
 
+func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
+	expStatement := &ast.ExpressionStatement{Token: p.currentToken}
+
+	expStatement.Expression = p.parseExpression(LOWEST)
+
+	if p.peekNextToken(token.SEMICOLON) {
+		p.nextToken()
+	}
+
+	return expStatement
+}
+
+func (p *Parser) parseExpression(precedence int) ast.Expression {
+	prefix := p.prefixParseFuncs[p.currentToken.Type]
+	if prefix == nil {
+		return nil
+	}
+	leftExp := prefix()
+
+	return leftExp
+}
+
+// SEMANTIC CODE FUNTIONS
+
+func (p *Parser) parseIdentifier() ast.Expression {
+	return &ast.Identifier{Token: p.currentToken, Value: p.currentToken.Literal}
+}
+
 func (p *Parser) parseStatement() ast.Statement {
 	switch p.currentToken.Type {
 	case token.LET:
@@ -98,7 +157,7 @@ func (p *Parser) parseStatement() ast.Statement {
 	case token.RETURN:
 		return p.parseReturnStatement()
 	default:
-		return nil
+		return p.parseExpressionStatement()
 	}
 
 }

@@ -1,11 +1,13 @@
 package ast
 
 import (
+	"bytes"
 	"github.com/Youssef-Mak/baby-interpreter/pkg/token"
 )
 
 type Node interface {
 	TokenLiteral() string
+	String() string
 }
 
 type Statement interface {
@@ -31,6 +33,16 @@ func (p *Program) TokenLiteral() string {
 	}
 }
 
+func (p *Program) String() string {
+	var out bytes.Buffer
+
+	for _, s := range p.Statements {
+		out.WriteString(s.String())
+	}
+
+	return out.String()
+}
+
 // LET STATEMENT -> "let <identifier> = <expression>;"
 type LetStatement struct {
 	Token token.Token // token.LET
@@ -40,6 +52,21 @@ type LetStatement struct {
 
 func (lStatement *LetStatement) statementNode()       {}
 func (lStatement *LetStatement) TokenLiteral() string { return lStatement.Token.Literal }
+func (lStatement *LetStatement) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(lStatement.TokenLiteral() + " ")
+	out.WriteString(lStatement.Name.String())
+	out.WriteString(" = ")
+
+	if lStatement.Value != nil {
+		out.WriteString(lStatement.Value.String())
+	}
+
+	out.WriteString(";")
+
+	return out.String()
+}
 
 type Identifier struct {
 	Token token.Token // token.IDENT
@@ -48,6 +75,7 @@ type Identifier struct {
 
 func (ident *Identifier) expressionNode()      {}
 func (ident *Identifier) TokenLiteral() string { return ident.Token.Literal }
+func (ident *Identifier) String() string       { return ident.Value }
 
 // RETURN STATEMENT -> "return <expression>;"
 type ReturnStatement struct {
@@ -57,3 +85,27 @@ type ReturnStatement struct {
 
 func (rS *ReturnStatement) statementNode()       {}
 func (rS *ReturnStatement) TokenLiteral() string { return rS.Token.Literal }
+func (rS *ReturnStatement) String() string {
+	var out bytes.Buffer
+	out.WriteString(rS.TokenLiteral() + " ")
+	if rS.ReturnValue != nil {
+		out.WriteString(rS.ReturnValue.String())
+	}
+	out.WriteString(";")
+	return out.String()
+}
+
+// EXPRESSION STATEMENT -> "<expression>;"
+type ExpressionStatement struct {
+	Token      token.Token
+	Expression Expression
+}
+
+func (exp *ExpressionStatement) statementNode()       {}
+func (exp *ExpressionStatement) TokenLiteral() string { return exp.Token.Literal }
+func (exp *ExpressionStatement) String() string {
+	if exp.Expression != nil {
+		return exp.Expression.String()
+	}
+	return ""
+}
