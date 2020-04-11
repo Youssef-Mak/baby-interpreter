@@ -124,6 +124,34 @@ func TestIdentifierExpression(t *testing.T) {
 	}
 }
 
+func TestIntLiteralExpression(t *testing.T) {
+	input := "10;"
+	l := tokenizer.New(input)
+	p := parser.New(l)
+	program := p.ParseProgram()
+	checkErrors(t, p)
+	if len(program.Statements) != 1 {
+		t.Fatalf("program has not enough statements. got=%d",
+			len(program.Statements))
+	}
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement. got=%T",
+			program.Statements[0])
+	}
+	literal, ok := stmt.Expression.(*ast.IntegerLiteral)
+	if !ok {
+		t.Fatalf("exp not *ast.Identifier. got=%T", stmt.Expression)
+	}
+	if literal.Value != 10 {
+		t.Errorf("literal.Value not %d. got=%d", 10, literal.Value)
+	}
+	if literal.TokenLiteral() != "10" {
+		t.Errorf("literal.TokenLiteral not %s. got=%s", "10",
+			literal.TokenLiteral())
+	}
+}
+
 func checkErrors(t *testing.T, p *parser.Parser) {
 	errors := p.GetErrors()
 	if len(errors) == 0 {

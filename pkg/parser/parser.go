@@ -5,6 +5,7 @@ import (
 	"github.com/Youssef-Mak/baby-interpreter/pkg/ast"
 	"github.com/Youssef-Mak/baby-interpreter/pkg/token"
 	"github.com/Youssef-Mak/baby-interpreter/pkg/tokenizer"
+	"strconv"
 )
 
 const (
@@ -39,6 +40,7 @@ func New(tokenizer *tokenizer.Tokenizer) *Parser {
 
 	p.prefixParseFuncs = make(map[token.TokenType]prefixParseFunc)
 	p.addPrefix(token.IDENTIF, p.parseIdentifier)
+	p.addPrefix(token.INT, p.parseIntegerLiteral)
 
 	p.infixParseFuncs = make(map[token.TokenType]infixParseFunc)
 
@@ -84,6 +86,52 @@ func (p *Parser) peekNextToken(toCheck token.TokenType) bool {
 func (p *Parser) peekNextTokenError(t token.TokenType) {
 	errMsg := fmt.Sprintf("expected token %s, but got %s", t, p.peekToken.Type)
 	p.errors = append(p.errors, errMsg)
+}
+
+/* EXPRESSION PARSING */
+
+func (p *Parser) parseExpression(precedence int) ast.Expression {
+	prefix := p.prefixParseFuncs[p.currentToken.Type]
+	if prefix == nil {
+		return nil
+	}
+	leftExp := prefix()
+
+	return leftExp
+}
+
+/* SEMANTIC CODE FUNTIONS */
+
+func (p *Parser) parseIdentifier() ast.Expression {
+	return &ast.Identifier{Token: p.currentToken, Value: p.currentToken.Literal}
+}
+
+func (p *Parser) parseIntegerLiteral() ast.Expression {
+	lit := &ast.IntegerLiteral{Token: p.currentToken}
+
+	value, err := strconv.ParseInt(p.currentToken.Literal, 0, 64)
+	if err != nil {
+		msg := fmt.Sprintf("Could not parse %q as Integer", p.currentToken.Literal)
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+
+	lit.Value = value
+	return lit
+}
+
+/* STATEMENT PARSING */
+
+func (p *Parser) parseStatement() ast.Statement {
+	switch p.currentToken.Type {
+	case token.LET:
+		return p.parseLetStatement()
+	case token.RETURN:
+		return p.parseReturnStatement()
+	default:
+		return p.parseExpressionStatement()
+	}
+
 }
 
 func (p *Parser) parseLetStatement() *ast.LetStatement {
@@ -132,34 +180,6 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 	}
 
 	return expStatement
-}
-
-func (p *Parser) parseExpression(precedence int) ast.Expression {
-	prefix := p.prefixParseFuncs[p.currentToken.Type]
-	if prefix == nil {
-		return nil
-	}
-	leftExp := prefix()
-
-	return leftExp
-}
-
-// SEMANTIC CODE FUNTIONS
-
-func (p *Parser) parseIdentifier() ast.Expression {
-	return &ast.Identifier{Token: p.currentToken, Value: p.currentToken.Literal}
-}
-
-func (p *Parser) parseStatement() ast.Statement {
-	switch p.currentToken.Type {
-	case token.LET:
-		return p.parseLetStatement()
-	case token.RETURN:
-		return p.parseReturnStatement()
-	default:
-		return p.parseExpressionStatement()
-	}
-
 }
 
 func (p *Parser) ParseProgram() *ast.Program {
