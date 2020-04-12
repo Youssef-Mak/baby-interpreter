@@ -19,6 +19,17 @@ const (
 	FUNCALL     // func(x)
 )
 
+var precedences = map[token.TokenType]int{
+	token.EQUALS:      EQUALS,
+	token.NOTEQUALS:   EQUALS,
+	token.LESSTHAN:    LESSGREATER,
+	token.GREATERTHAN: LESSGREATER,
+	token.PLUS:        SUM,
+	token.MINUS:       SUM,
+	token.SLASH:       PRODUCT,
+	token.ASTERIX:     PRODUCT,
+}
+
 type Parser struct {
 	tokenizer *tokenizer.Tokenizer
 	errors    []string
@@ -41,8 +52,18 @@ func New(tokenizer *tokenizer.Tokenizer) *Parser {
 	p.prefixParseFuncs = make(map[token.TokenType]prefixParseFunc)
 	p.addPrefix(token.IDENTIF, p.parseIdentifier)
 	p.addPrefix(token.INT, p.parseIntegerLiteral)
+	p.addPrefix(token.NOT, p.parsePrefixOperationExpression)
+	p.addPrefix(token.MINUS, p.parsePrefixOperationExpression)
 
 	p.infixParseFuncs = make(map[token.TokenType]infixParseFunc)
+	p.addInfix(token.PLUS, p.parseInfixExpression)
+	p.addInfix(token.MINUS, p.parseInfixExpression)
+	p.addInfix(token.SLASH, p.parseInfixExpression)
+	p.addInfix(token.ASTERIX, p.parseInfixExpression)
+	p.addInfix(token.EQUALS, p.parseInfixExpression)
+	p.addInfix(token.NOTEQUALS, p.parseInfixExpression)
+	p.addInfix(token.LESSTHAN, p.parseInfixExpression)
+	p.addInfix(token.GREATERTHAN, p.parseInfixExpression)
 
 	// Read tokens in pairs, so currToken and peekToken are both set
 	p.nextToken()
@@ -59,6 +80,34 @@ func (p *Parser) addInfix(tokenType token.TokenType, fn infixParseFunc) {
 	p.infixParseFuncs[tokenType] = fn
 }
 
+func (p *Parser) noPrefixParseFnError(t token.TokenType) {
+	msg := fmt.Sprintf("no prefix parse function for %s was found", t)
+	p.errors = append(p.errors, msg)
+}
+
+func (p *Parser) noInfixParseFnError(t token.TokenType) {
+	msg := fmt.Sprintf("no infix parse function for %s was found", t)
+	p.errors = append(p.errors, msg)
+}
+
+/* PRECEDENCE MANAGEMENT */
+
+func (p *Parser) peekPrecedence() int {
+	if p, ok := precedences[p.peekToken.Type]; ok {
+		return p
+	}
+	return LOWEST
+}
+
+func (p *Parser) currPrecedence() int {
+	if p, ok := precedences[p.currentToken.Type]; ok {
+		return p
+	}
+	return LOWEST
+}
+
+/* TOKEN NAVIGATION */
+
 func (p *Parser) nextToken() {
 	p.currentToken = p.peekToken
 	p.peekToken = p.tokenizer.NextToken()
@@ -72,13 +121,15 @@ func (p *Parser) checkIdNextToken(toCheck token.TokenType) bool {
 	return p.peekToken.Type == toCheck
 }
 
-// Assertion function: enforce correctness of the order of tokens by checking type of next token
-func (p *Parser) peekNextToken(toCheck token.TokenType) bool {
+// Assertion Function: enforce correctness of the order of tokens by checking type of next token
+func (p *Parser) peekNextToken(toCheck token.TokenType, strict bool) bool {
 	if p.checkIdNextToken(toCheck) {
 		p.nextToken()
 		return true
 	} else {
-		p.peekNextTokenError(toCheck)
+		if strict {
+			p.peekNextTokenError(toCheck)
+		}
 		return false
 	}
 }
@@ -93,11 +144,51 @@ func (p *Parser) peekNextTokenError(t token.TokenType) {
 func (p *Parser) parseExpression(precedence int) ast.Expression {
 	prefix := p.prefixParseFuncs[p.currentToken.Type]
 	if prefix == nil {
+		p.noPrefixParseFnError(p.currentToken.Type)
 		return nil
 	}
 	leftExp := prefix()
 
+	for !p.checkIdNextToken(token.SEMICOLON) && precedence < p.peekPrecedence() {
+		infix := p.infixParseFuncs[p.peekToken.Type]
+		if infix == nil {
+			p.noInfixParseFnError(p.currentToken.Type)
+			return leftExp
+		}
+
+		p.nextToken()
+
+		leftExp = infix(leftExp)
+	}
+
 	return leftExp
+}
+
+func (p *Parser) parsePrefixOperationExpression() ast.Expression {
+	expression := &ast.PrefixExpression{
+		Token:    p.currentToken,
+		Operator: p.currentToken.Literal,
+	}
+
+	p.nextToken()
+
+	expression.Right = p.parseExpression(PREFIX)
+
+	return expression
+}
+
+func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
+	expression := &ast.InfixExpression{
+		Token:    p.currentToken,
+		Operator: p.currentToken.Literal,
+		Left:     left,
+	}
+
+	precedence := p.currPrecedence()
+	p.nextToken()
+	expression.Right = p.parseExpression(precedence)
+
+	return expression
 }
 
 /* SEMANTIC CODE FUNTIONS */
@@ -137,14 +228,14 @@ func (p *Parser) parseStatement() ast.Statement {
 func (p *Parser) parseLetStatement() *ast.LetStatement {
 	letStatement := &ast.LetStatement{Token: p.currentToken} // Going to be LET type
 
-	if !p.peekNextToken(token.IDENTIF) {
+	if !p.peekNextToken(token.IDENTIF, true) {
 		return nil
 	}
 
 	// There is an Identifier i.e is of form '''let <identifier> <...>'''
 	letStatement.Name = &ast.Identifier{Token: p.currentToken, Value: p.currentToken.Literal}
 
-	if !p.peekNextToken(token.ASSIGN) {
+	if !p.peekNextToken(token.ASSIGN, true) {
 		return nil
 	}
 
@@ -172,10 +263,9 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 
 func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 	expStatement := &ast.ExpressionStatement{Token: p.currentToken}
-
 	expStatement.Expression = p.parseExpression(LOWEST)
 
-	if p.peekNextToken(token.SEMICOLON) {
+	if p.checkIdNextToken(token.SEMICOLON) {
 		p.nextToken()
 	}
 
