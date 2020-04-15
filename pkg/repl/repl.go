@@ -3,8 +3,8 @@ package repl
 import (
 	"bufio"
 	"fmt"
+	"github.com/Youssef-Mak/baby-interpreter/pkg/evaluator"
 	"github.com/Youssef-Mak/baby-interpreter/pkg/parser"
-	"github.com/Youssef-Mak/baby-interpreter/pkg/token"
 	"github.com/Youssef-Mak/baby-interpreter/pkg/tokenizer"
 	"io"
 )
@@ -31,11 +31,11 @@ func Initialize(in io.Reader, out io.Writer) {
 			printParserErrors(out, parser.GetErrors())
 			continue
 		}
-		io.WriteString(out, program.String())
-		io.WriteString(out, "\n")
 
-		for tok := tokenizer.NextToken(); tok.Type != token.EOF; tok = tokenizer.NextToken() {
-			fmt.Printf("%+v\n", tok)
+		evaluated := evaluator.Eval(program)
+		if evaluated != nil {
+			io.WriteString(out, evaluated.Inspect())
+			io.WriteString(out, "\n")
 		}
 	}
 }
