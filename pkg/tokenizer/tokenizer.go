@@ -65,6 +65,9 @@ func (t *Tokenizer) NextToken() token.Token {
 		tok = newToken(token.LBRACE, t.ch)
 	case '}':
 		tok = newToken(token.RBRACE, t.ch)
+	case '"':
+		tok.Type = token.STRING
+		tok.Literal = t.readString()
 	case 0:
 		tok.Literal = ""
 		tok.Type = token.EOF
@@ -108,6 +111,17 @@ func (t *Tokenizer) readNumber() string {
 	position := t.position
 	for isDigit(t.ch) {
 		t.readChar()
+	}
+	return t.input[position:t.position]
+}
+
+// Fully read String
+func (t *Tokenizer) readString() string {
+	t.readChar() // Skip opening quotes
+	position := t.position
+	for t.ch != 0 && t.ch != '"' {
+		t.readChar()
+
 	}
 	return t.input[position:t.position]
 }

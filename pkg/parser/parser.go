@@ -53,6 +53,7 @@ func New(tokenizer *tokenizer.Tokenizer) *Parser {
 	p.prefixParseFuncs = make(map[token.TokenType]prefixParseFunc)
 	p.addPrefix(token.IDENTIF, p.parseIdentifier)
 	p.addPrefix(token.INT, p.parseIntegerLiteral)
+	p.addPrefix(token.STRING, p.parseStringLiteral)
 	p.addPrefix(token.TRUE, p.parseBoolean)
 	p.addPrefix(token.FALSE, p.parseBoolean)
 	p.addPrefix(token.LPAREN, p.parseGroupExpression)
@@ -328,6 +329,11 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 	}
 
 	lit.Value = value
+	return lit
+}
+
+func (p *Parser) parseStringLiteral() ast.Expression {
+	lit := &ast.StringLiteral{Token: p.currentToken, Value: p.currentToken.Literal}
 	return lit
 }
 

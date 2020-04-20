@@ -48,6 +48,21 @@ func testIntegerLiteral(t *testing.T, exp ast.Expression, intVal int64) bool {
 	}
 	return true
 }
+func TestStringLiteralExpression(t *testing.T) {
+	input := `"hello world";`
+	tok := tokenizer.New(input)
+	p := parser.New(tok)
+	program := p.ParseProgram()
+	checkErrors(t, p)
+	stmt := program.Statements[0].(*ast.ExpressionStatement)
+	literal, ok := stmt.Expression.(*ast.StringLiteral)
+	if !ok {
+		t.Fatalf("exp not *ast.StringLiteral. got=%T", stmt.Expression)
+	}
+	if literal.Value != "hello world" {
+		t.Errorf("literal.Value not %q. got=%q", "hello world", literal.Value)
+	}
+}
 
 func testIdentifier(t *testing.T, id ast.Expression, value string) bool {
 	identifier, ok := id.(*ast.Identifier)

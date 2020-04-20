@@ -9,6 +9,7 @@ const (
 	// Identifiers + literals
 	IDENTIF TokenType = "IDENTIF" // add, foobar, x, y, ...
 	INT     TokenType = "INT"     // 1343456
+	STRING  TokenType = "STRING"  // "Hello World"
 	// Operators
 	ASSIGN  TokenType = "="
 	PLUS    TokenType = "+"

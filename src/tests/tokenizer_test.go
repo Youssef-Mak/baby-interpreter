@@ -53,21 +53,23 @@ func TestSymTokenizer(t *testing.T) {
 
 func TestSynTokenizer(t *testing.T) {
 	input := `let five = 5;
-	let ten = 10;
-	let add = fn(x, y) {
-	x + y;
-	};
-	let result = add(five, ten);
+let ten = 10;
+let add = fn(x, y) {
+x + y;
+};
+let result = add(five, ten);
 
-	if (5 < 10) {
-		return true;
-	} else {
-		return false;
-	}
+if (5 < 10) {
+	return true;
+} else {
+	return false;
+}
 
-	10 == 10;
-	10 != 9;
-	`
+10 == 10;
+10 != 9;
+"foobar"
+"foo bar"
+`
 
 	tests := []struct {
 		expectedType    token.TokenType
@@ -134,6 +136,8 @@ func TestSynTokenizer(t *testing.T) {
 		{token.NOTEQUALS, "!="},
 		{token.INT, "9"},
 		{token.SEMICOLON, ";"},
+		{token.STRING, "foobar"},
+		{token.STRING, "foo bar"},
 		{token.EOF, ""},
 	}
 
