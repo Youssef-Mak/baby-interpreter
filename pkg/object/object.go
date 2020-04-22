@@ -16,6 +16,7 @@ const (
 	NULL_OBJ       = "NULL"
 	RETURN_VAL_OBJ = "RETURN_VAL"
 	FUNCTION_OBJ   = "FUNCTION"
+	BUILTIN_OBJ    = "BUILTIN"
 	ERROR_OBJ      = "ERROR"
 )
 
@@ -80,6 +81,14 @@ func (fun *Function) Inspect() string {
 	out.WriteString("\n}")
 	return out.String()
 }
+
+type BuiltInFunction func(args ...Object) Object
+type BuiltIn struct {
+	Func BuiltInFunction
+}
+
+func (b *BuiltIn) Type() ObjectType { return BUILTIN_OBJ }
+func (b *BuiltIn) Inspect() string  { return "BuiltIn Function" }
 
 type Error struct {
 	Message string

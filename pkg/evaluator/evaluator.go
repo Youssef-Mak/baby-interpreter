@@ -12,6 +12,24 @@ var (
 	NULL  = &object.Null{}
 )
 
+var builtinMap = map[string]*object.BuiltIn{
+	"len": &object.BuiltIn{
+		Func: func(args ...object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
+					len(args), 1)
+			}
+
+			switch arg := args[0].(type) {
+			case *object.String:
+				return &object.Integer{Value: int64(len(arg.Value))}
+			default:
+				return newError("argument to `len` not supported, got %s", args[0].Type())
+			}
+		},
+	},
+}
+
 func Eval(node ast.Node, env *object.Environment) object.Object {
 	switch node := node.(type) {
 
@@ -222,18 +240,25 @@ func evalIfExpression(ie *ast.IfExpression, env *object.Environment) object.Obje
 }
 
 func evalFunctionCall(funcCalled object.Object, args []object.Object) object.Object {
-	function, ok := funcCalled.(*object.Function)
-	if !ok {
-		return newError("Is not of type Function: %s", funcCalled.Type())
-	}
 
-	funcScope := object.NewEnclosedEnvironment(function.Env)
-	for idx, param := range function.Parameters {
-		funcScope.Set(param.Value, args[idx])
+	switch funcCalled := funcCalled.(type) {
+	case *object.Function:
+		if len(args) != len(funcCalled.Parameters) {
+			return newError(
+				"Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
+				len(funcCalled.Parameters), len(args))
+		}
+		funcScope := object.NewEnclosedEnvironment(funcCalled.Env)
+		for idx, param := range funcCalled.Parameters {
+			funcScope.Set(param.Value, args[idx])
+		}
+		evaluatedRes := Eval(funcCalled.Body, funcScope)
+		return unwrapReturnValue(evaluatedRes)
+	case *object.BuiltIn:
+		return funcCalled.Func(args...)
+	default:
+		return newError("Is not Callable (not a recognized function): %s", funcCalled.Type())
 	}
-
-	evaluatedRes := Eval(function.Body, funcScope)
-	return unwrapReturnValue(evaluatedRes)
 }
 
 func unwrapReturnValue(obj object.Object) object.Object {
@@ -289,10 +314,16 @@ func evalFunctionLiteral(fun *ast.FunctionLiteral, env *object.Environment) obje
 
 func evalIdentifier(id *ast.Identifier, env *object.Environment) object.Object {
 	val, ok := env.Get(id.Value)
-	if !ok {
-		return newError("Identifier not Found: " + id.Value)
+	if ok {
+		return val
 	}
-	return val
+
+	builtin, ok := builtinMap[id.Value]
+	if ok {
+		return builtin
+	}
+
+	return newError("Identifier not Found: " + id.Value)
 }
 
 func boolToBooleanObject(b bool) *object.Boolean {
