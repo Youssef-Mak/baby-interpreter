@@ -65,6 +65,10 @@ func (t *Tokenizer) NextToken() token.Token {
 		tok = newToken(token.LBRACE, t.ch)
 	case '}':
 		tok = newToken(token.RBRACE, t.ch)
+	case '[':
+		tok = newToken(token.LBRACKET, t.ch)
+	case ']':
+		tok = newToken(token.RBRACKET, t.ch)
 	case '"':
 		tok.Type = token.STRING
 		tok.Literal = t.readString()

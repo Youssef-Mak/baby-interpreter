@@ -7,7 +7,7 @@ import (
 )
 
 func TestSymTokenizer(t *testing.T) {
-	input := `,;(}{)+=!-/*5;5 < 10 > 5;`
+	input := `,;(}{)+=!-/*5;5 < 10 > 5;[]`
 
 	tests := []struct {
 		expectedType    token.TokenType
@@ -33,6 +33,8 @@ func TestSymTokenizer(t *testing.T) {
 		{token.GREATERTHAN, ">"},
 		{token.INT, "5"},
 		{token.SEMICOLON, ";"},
+		{token.LBRACKET, "["},
+		{token.RBRACKET, "]"},
 	}
 
 	l := tokenizer.New(input)

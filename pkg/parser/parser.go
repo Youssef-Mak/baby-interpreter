@@ -17,6 +17,7 @@ const (
 	PRODUCT     // *
 	PREFIX      // !x or -x
 	FUNCALL     // func(x)
+	INDEX       // array[2]
 )
 
 var precedences = map[token.TokenType]int{
@@ -29,6 +30,7 @@ var precedences = map[token.TokenType]int{
 	token.SLASH:       PRODUCT,
 	token.ASTERIX:     PRODUCT,
 	token.LPAREN:      FUNCALL,
+	token.LBRACKET:    INDEX,
 }
 
 type Parser struct {
@@ -57,6 +59,7 @@ func New(tokenizer *tokenizer.Tokenizer) *Parser {
 	p.addPrefix(token.TRUE, p.parseBoolean)
 	p.addPrefix(token.FALSE, p.parseBoolean)
 	p.addPrefix(token.LPAREN, p.parseGroupExpression)
+	p.addPrefix(token.LBRACKET, p.parseArrayLiteral)
 	p.addPrefix(token.IF, p.parseIfExpression)
 	p.addPrefix(token.FUNCTION, p.parseFunctionLiteral)
 	p.addPrefix(token.NOT, p.parsePrefixOperationExpression)
@@ -71,6 +74,7 @@ func New(tokenizer *tokenizer.Tokenizer) *Parser {
 	p.addInfix(token.NOTEQUALS, p.parseInfixExpression)
 	p.addInfix(token.LESSTHAN, p.parseInfixExpression)
 	p.addInfix(token.GREATERTHAN, p.parseInfixExpression)
+	p.addInfix(token.LBRACKET, p.parseIndexExpression)
 	p.addInfix(token.LPAREN, p.parseCallExpression)
 
 	// Read tokens in pairs, so currToken and peekToken are both set
@@ -130,6 +134,7 @@ func (p *Parser) checkIdNextToken(toCheck token.TokenType) bool {
 }
 
 // Assertion Function: enforce correctness of the order of tokens by checking type of next token
+// If Matches toCheck, parser moves to next token
 func (p *Parser) peekNextToken(toCheck token.TokenType, strict bool) bool {
 	if p.checkIdNextToken(toCheck) {
 		p.nextToken()
@@ -254,6 +259,31 @@ func (p *Parser) parseIfExpression() ast.Expression {
 	return expression
 }
 
+func (p *Parser) parseArrayLiteral() ast.Expression {
+	arr := &ast.ArrayLiteral{Token: p.currentToken}
+	p.nextToken()
+	elems := []ast.Expression{}
+
+	if p.peekNextToken(token.RBRACKET, false) {
+		arr.Elements = elems
+		return arr
+	}
+
+	elems = append(elems, p.parseExpression(LOWEST))
+
+	for p.peekNextToken(token.COMMA, false) {
+		p.nextToken()
+		elems = append(elems, p.parseExpression(LOWEST))
+	}
+
+	if !p.peekNextToken(token.RBRACKET, true) {
+		return nil
+	}
+
+	arr.Elements = elems
+	return arr
+}
+
 func (p *Parser) parseFunctionLiteral() ast.Expression {
 	funcExp := &ast.FunctionLiteral{Token: p.currentToken}
 
@@ -290,6 +320,20 @@ func (p *Parser) parseParameters() []*ast.Identifier {
 	}
 
 	return parameters
+}
+
+func (p *Parser) parseIndexExpression(array ast.Expression) ast.Expression {
+	idxExp := &ast.IndexExpression{Token: p.currentToken, Left: array}
+
+	p.nextToken()
+
+	idxExp.Index = p.parseExpression(LOWEST)
+
+	if !p.peekNextToken(token.RBRACKET, true) {
+		return nil
+	}
+
+	return idxExp
 }
 
 func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {

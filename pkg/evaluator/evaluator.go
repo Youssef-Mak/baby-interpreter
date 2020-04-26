@@ -87,6 +87,12 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return &object.Integer{Value: node.Value}
 	case *ast.StringLiteral:
 		return &object.String{Value: node.Value}
+	case *ast.ArrayLiteral:
+		elements, error := evalExpressions(node.Elements, env)
+		if error != nil {
+			return error
+		}
+		return &object.Array{Elements: elements}
 	case *ast.Boolean:
 		return boolToBooleanObject(node.Value)
 	}
