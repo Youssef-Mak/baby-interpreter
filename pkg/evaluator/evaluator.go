@@ -23,9 +23,92 @@ var builtinMap = map[string]*object.BuiltIn{
 			switch arg := args[0].(type) {
 			case *object.String:
 				return &object.Integer{Value: int64(len(arg.Value))}
+			case *object.Array:
+				return &object.Integer{Value: int64(len(arg.Elements))}
 			default:
 				return newError("argument to `len` not supported, got %s", args[0].Type())
 			}
+		},
+	},
+	"head": &object.BuiltIn{
+		Func: func(args ...object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
+					len(args), 1)
+			}
+
+			switch arg := args[0].(type) {
+			case *object.String:
+				return &object.String{Value: string(arg.Value[0])}
+			case *object.Array:
+				return arg.Elements[0]
+			default:
+				return newError("argument to `head` not supported, got %s", args[0].Type())
+			}
+		},
+	},
+	"tail": &object.BuiltIn{
+		Func: func(args ...object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
+					len(args), 1)
+			}
+
+			switch arg := args[0].(type) {
+			case *object.String:
+				return &object.String{Value: string(arg.Value[len(arg.Value)-1])}
+			case *object.Array:
+				return arg.Elements[len(arg.Elements)-1]
+			default:
+				return newError("argument to `tail` not supported, got %s", args[0].Type())
+			}
+		},
+	},
+	"rest": &object.BuiltIn{
+		Func: func(args ...object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
+					len(args), 1)
+			}
+
+			switch arg := args[0].(type) {
+			case *object.String:
+				if len(arg.Value) > 0 {
+					return &object.String{Value: string(arg.Value[1:len(arg.Value)])}
+				}
+			case *object.Array:
+				length := len(arg.Elements)
+				if length > 0 {
+					newElems := make([]object.Object, length-1, length-1)
+					copy(newElems, arg.Elements[1:len(arg.Elements)])
+					return &object.Array{Elements: newElems}
+				}
+			default:
+				return newError("argument to `tail` not supported, got %s", args[0].Type())
+			}
+			return NULL
+		},
+	},
+	"push": &object.BuiltIn{
+		Func: func(args ...object.Object) object.Object {
+			if len(args) != 2 {
+				return newError("Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
+					len(args), 1)
+			}
+
+			switch arg := args[0].(type) {
+			case *object.Array:
+				length := len(arg.Elements)
+				if length > 0 {
+					newElems := make([]object.Object, length+1, length+1)
+					copy(newElems, arg.Elements)
+					newElems[length] = args[1]
+					return &object.Array{Elements: newElems}
+				}
+			default:
+				return newError("argument to `tail` not supported, got %s", args[0].Type())
+			}
+			return NULL
 		},
 	},
 }
@@ -77,6 +160,16 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return left
 		}
 		return evalInfixExpression(node.Operator, right, left)
+	case *ast.IndexExpression:
+		left := Eval(node.Left, env)
+		if isError(left) {
+			return left
+		}
+		index := Eval(node.Index, env)
+		if isError(index) {
+			return left
+		}
+		return evalIndexExpression(left, index)
 	case *ast.IfExpression:
 		return evalIfExpression(node, env)
 	case *ast.FunctionLiteral:
@@ -272,6 +365,21 @@ func unwrapReturnValue(obj object.Object) object.Object {
 		return returnValue.Value
 	}
 	return obj
+}
+
+func evalIndexExpression(left object.Object, index object.Object) object.Object {
+	array, arrOk := left.(*object.Array)
+	if !arrOk {
+		return newError("expecting Array Type but got %s", left.Type())
+	}
+	idx, idxOk := index.(*object.Integer)
+	if !idxOk {
+		return newError("expecting Integer Type but got %s", index.Type())
+	}
+	if idx.Value > int64(len(array.Elements)-1) || idx.Value < 0 {
+		return NULL
+	}
+	return array.Elements[idx.Value]
 }
 
 func isTruthy(ob object.Object) bool {

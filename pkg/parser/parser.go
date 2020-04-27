@@ -261,7 +261,6 @@ func (p *Parser) parseIfExpression() ast.Expression {
 
 func (p *Parser) parseArrayLiteral() ast.Expression {
 	arr := &ast.ArrayLiteral{Token: p.currentToken}
-	p.nextToken()
 	elems := []ast.Expression{}
 
 	if p.peekNextToken(token.RBRACKET, false) {
@@ -269,6 +268,7 @@ func (p *Parser) parseArrayLiteral() ast.Expression {
 		return arr
 	}
 
+	p.nextToken()
 	elems = append(elems, p.parseExpression(LOWEST))
 
 	for p.peekNextToken(token.COMMA, false) {
