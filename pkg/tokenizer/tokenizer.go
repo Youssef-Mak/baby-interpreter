@@ -55,8 +55,12 @@ func (t *Tokenizer) NextToken() token.Token {
 		tok = newToken(token.OR, t.ch)
 	case ',':
 		tok = newToken(token.COMMA, t.ch)
+	case '.':
+		tok = newToken(token.DOT, t.ch)
 	case ';':
 		tok = newToken(token.SEMICOLON, t.ch)
+	case ':':
+		tok = newToken(token.COLON, t.ch)
 	case '(':
 		tok = newToken(token.LPAREN, t.ch)
 	case ')':

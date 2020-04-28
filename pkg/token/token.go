@@ -17,6 +17,7 @@ const (
 	SLASH   TokenType = "/"
 	ASTERIX TokenType = "*"
 	NOT     TokenType = "!"
+	DOT     TokenType = "."
 	// Logic
 	LESSTHAN    TokenType = "<"
 	GREATERTHAN TokenType = ">"
@@ -29,6 +30,7 @@ const (
 	// Delimiters
 	COMMA     TokenType = ","
 	SEMICOLON TokenType = ";"
+	COLON     TokenType = ";"
 	LPAREN    TokenType = "("
 	RPAREN    TokenType = ")"
 	LBRACE    TokenType = "{"

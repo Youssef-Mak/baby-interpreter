@@ -167,25 +167,41 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		index := Eval(node.Index, env)
 		if isError(index) {
-			return left
+			return index
 		}
 		return evalIndexExpression(left, index)
+	case *ast.DotExpression:
+		left := Eval(node.Left, env)
+		if isError(left) {
+			return left
+		}
+		attribute := Eval(node.Attribute, env)
+		if isError(attribute) {
+			return attribute
+		}
+		return evalDotExpression(left, attribute)
 	case *ast.IfExpression:
 		return evalIfExpression(node, env)
 	case *ast.FunctionLiteral:
 		return evalFunctionLiteral(node, env)
 	case *ast.Identifier:
 		return evalIdentifier(node, env)
-	case *ast.IntegerLiteral:
-		return &object.Integer{Value: node.Value}
-	case *ast.StringLiteral:
-		return &object.String{Value: node.Value}
 	case *ast.ArrayLiteral:
 		elements, error := evalExpressions(node.Elements, env)
 		if error != nil {
 			return error
 		}
 		return &object.Array{Elements: elements}
+	case *ast.HashLiteral:
+		evalExprMap, error := evalMappedExpressions(node.Pairs, env)
+		if error != nil {
+			return error
+		}
+		return evalExprMap
+	case *ast.IntegerLiteral:
+		return &object.Integer{Value: node.Value}
+	case *ast.StringLiteral:
+		return &object.String{Value: node.Value}
 	case *ast.Boolean:
 		return boolToBooleanObject(node.Value)
 	}
@@ -224,6 +240,29 @@ func evalExpressions(exprs []ast.Expression, env *object.Environment) ([]object.
 		result = append(result, evaluated)
 	}
 	return result, nil
+}
+
+func evalMappedExpressions(exprs map[ast.Expression]ast.Expression, env *object.Environment) (object.Object, object.Object) {
+	evaldMap := &object.Hash{Pairs: map[object.HashKey]object.HashEntry{}}
+
+	for keyExpr, valExpr := range exprs {
+		keyEvaled := Eval(keyExpr, env)
+		if isError(keyEvaled) {
+			return nil, keyEvaled
+		}
+		hashKey, ok := keyEvaled.(object.Hashable)
+		if !ok {
+			return evaldMap, newError("This key is not Hashable : %s", keyEvaled.Inspect())
+		}
+		valEvaled := Eval(valExpr, env)
+		if isError(valEvaled) {
+			return nil, valEvaled
+		}
+		hEntry := object.HashEntry{Key: keyEvaled, Value: valEvaled}
+		evaldMap.Pairs[hashKey.HashKey()] = hEntry
+	}
+
+	return evaldMap, nil
 }
 
 func evalBlockStatement(stmts []ast.Statement, env *object.Environment) object.Object {
@@ -380,6 +419,23 @@ func evalIndexExpression(left object.Object, index object.Object) object.Object 
 		return NULL
 	}
 	return array.Elements[idx.Value]
+}
+
+func evalDotExpression(left object.Object, attribute object.Object) object.Object {
+	hash, ok := left.(*object.Hash)
+	if !ok {
+		return newError("expecting Hash Type but got %s", left.Type())
+	}
+	attr, attrOk := attribute.(object.Hashable)
+	if !attrOk {
+		return newError("expecting Hashable Type but got %s", attribute.Type())
+	}
+
+	pair, found := hash.Pairs[attr.HashKey()]
+	if !found {
+		return NULL
+	}
+	return pair.Value
 }
 
 func isTruthy(ob object.Object) bool {

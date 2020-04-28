@@ -18,6 +18,7 @@ const (
 	PREFIX      // !x or -x
 	FUNCALL     // func(x)
 	INDEX       // array[2]
+	DOT         // obj.prop
 )
 
 var precedences = map[token.TokenType]int{
@@ -31,6 +32,7 @@ var precedences = map[token.TokenType]int{
 	token.ASTERIX:     PRODUCT,
 	token.LPAREN:      FUNCALL,
 	token.LBRACKET:    INDEX,
+	token.DOT:         DOT,
 }
 
 type Parser struct {
@@ -60,6 +62,7 @@ func New(tokenizer *tokenizer.Tokenizer) *Parser {
 	p.addPrefix(token.FALSE, p.parseBoolean)
 	p.addPrefix(token.LPAREN, p.parseGroupExpression)
 	p.addPrefix(token.LBRACKET, p.parseArrayLiteral)
+	p.addPrefix(token.LBRACE, p.parseHashLiteral)
 	p.addPrefix(token.IF, p.parseIfExpression)
 	p.addPrefix(token.FUNCTION, p.parseFunctionLiteral)
 	p.addPrefix(token.NOT, p.parsePrefixOperationExpression)
@@ -75,6 +78,7 @@ func New(tokenizer *tokenizer.Tokenizer) *Parser {
 	p.addInfix(token.LESSTHAN, p.parseInfixExpression)
 	p.addInfix(token.GREATERTHAN, p.parseInfixExpression)
 	p.addInfix(token.LBRACKET, p.parseIndexExpression)
+	p.addInfix(token.DOT, p.parseDotExpression)
 	p.addInfix(token.LPAREN, p.parseCallExpression)
 
 	// Read tokens in pairs, so currToken and peekToken are both set
@@ -260,7 +264,7 @@ func (p *Parser) parseIfExpression() ast.Expression {
 }
 
 func (p *Parser) parseArrayLiteral() ast.Expression {
-	arr := &ast.ArrayLiteral{Token: p.currentToken}
+	arr := &ast.ArrayLiteral{Token: p.currentToken} // token.LBRACKET
 	elems := []ast.Expression{}
 
 	if p.peekNextToken(token.RBRACKET, false) {
@@ -282,6 +286,38 @@ func (p *Parser) parseArrayLiteral() ast.Expression {
 
 	arr.Elements = elems
 	return arr
+}
+
+func (p *Parser) parseHashLiteral() ast.Expression {
+	hash := &ast.HashLiteral{Token: p.currentToken} // token.LBRACE
+	pairs := map[ast.Expression]ast.Expression{}
+
+	if p.peekNextToken(token.RBRACE, false) {
+		hash.Pairs = pairs
+		return hash
+	}
+
+	for !p.checkIdNextToken(token.RBRACE) {
+		p.nextToken()
+		key := p.parseExpression(LOWEST)
+		if !p.peekNextToken(token.COLON, true) {
+			return nil
+		}
+		p.nextToken()
+		val := p.parseExpression(LOWEST)
+		pairs[key] = val
+
+		if !p.checkIdNextToken(token.RBRACE) && !p.peekNextToken(token.COMMA, true) {
+			return nil
+		}
+	}
+
+	if !p.peekNextToken(token.RBRACE, true) {
+		return nil
+	}
+
+	hash.Pairs = pairs
+	return hash
 }
 
 func (p *Parser) parseFunctionLiteral() ast.Expression {
@@ -334,6 +370,15 @@ func (p *Parser) parseIndexExpression(array ast.Expression) ast.Expression {
 	}
 
 	return idxExp
+}
+
+func (p *Parser) parseDotExpression(hash ast.Expression) ast.Expression {
+	dotExp := &ast.DotExpression{Token: p.currentToken, Left: hash}
+
+	p.nextToken()
+	dotExp.Attribute = p.parseExpression(LOWEST)
+
+	return dotExp
 }
 
 func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
