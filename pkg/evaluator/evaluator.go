@@ -111,6 +111,15 @@ var builtinMap = map[string]*object.BuiltIn{
 			return NULL
 		},
 	},
+	"print": &object.BuiltIn{
+		Func: func(args ...object.Object) object.Object {
+			for _, arg := range args {
+				fmt.Println(arg.Inspect())
+			}
+
+			return NULL
+		},
+	},
 }
 
 func Eval(node ast.Node, env *object.Environment) object.Object {
