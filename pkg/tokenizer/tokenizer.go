@@ -32,17 +32,45 @@ func (t *Tokenizer) NextToken() token.Token {
 	case '*':
 		tok = newToken(token.ASTERIX, t.ch)
 	case '=':
-		if t.peekChar() == '=' {
+		switch t.peekChar() {
+		case '&':
 			t.readChar()
-			tok = token.Token{Type: token.EQUALS, Literal: "=="}
-		} else {
+			if t.peekChar() == '=' {
+				t.readChar()
+				tok = token.Token{Type: token.REF_EQUALS, Literal: "=&="}
+			} else {
+				tok = newToken(token.ILLEGAL, t.ch)
+			}
+		case '*':
+			t.readChar()
+			if t.peekChar() == '=' {
+				t.readChar()
+				tok = token.Token{Type: token.VAL_EQUALS, Literal: "=*="}
+			} else {
+				tok = newToken(token.ILLEGAL, t.ch)
+			}
+		default:
 			tok = newToken(token.ASSIGN, t.ch)
 		}
 	case '!':
-		if t.peekChar() == '=' {
+		switch t.peekChar() {
+		case '&':
 			t.readChar()
-			tok = token.Token{Type: token.NOTEQUALS, Literal: "!="}
-		} else {
+			if t.peekChar() == '=' {
+				t.readChar()
+				tok = token.Token{Type: token.REF_NOTEQUALS, Literal: "!&="}
+			} else {
+				tok = newToken(token.ILLEGAL, t.ch)
+			}
+		case '*':
+			t.readChar()
+			if t.peekChar() == '=' {
+				t.readChar()
+				tok = token.Token{Type: token.VAL_NOTEQUALS, Literal: "!*="}
+			} else {
+				tok = newToken(token.ILLEGAL, t.ch)
+			}
+		default:
 			tok = newToken(token.NOT, t.ch)
 		}
 	case '>':

@@ -22,17 +22,19 @@ const (
 )
 
 var precedences = map[token.TokenType]int{
-	token.EQUALS:      EQUALS,
-	token.NOTEQUALS:   EQUALS,
-	token.LESSTHAN:    LESSGREATER,
-	token.GREATERTHAN: LESSGREATER,
-	token.PLUS:        SUM,
-	token.MINUS:       SUM,
-	token.SLASH:       PRODUCT,
-	token.ASTERIX:     PRODUCT,
-	token.LPAREN:      FUNCALL,
-	token.LBRACKET:    INDEX,
-	token.DOT:         DOT,
+	token.REF_EQUALS:    EQUALS,
+	token.VAL_EQUALS:    EQUALS,
+	token.REF_NOTEQUALS: EQUALS,
+	token.VAL_NOTEQUALS: EQUALS,
+	token.LESSTHAN:      LESSGREATER,
+	token.GREATERTHAN:   LESSGREATER,
+	token.PLUS:          SUM,
+	token.MINUS:         SUM,
+	token.SLASH:         PRODUCT,
+	token.ASTERIX:       PRODUCT,
+	token.LPAREN:        FUNCALL,
+	token.LBRACKET:      INDEX,
+	token.DOT:           DOT,
 }
 
 type Parser struct {
@@ -73,8 +75,10 @@ func New(tokenizer *tokenizer.Tokenizer) *Parser {
 	p.addInfix(token.MINUS, p.parseInfixExpression)
 	p.addInfix(token.SLASH, p.parseInfixExpression)
 	p.addInfix(token.ASTERIX, p.parseInfixExpression)
-	p.addInfix(token.EQUALS, p.parseInfixExpression)
-	p.addInfix(token.NOTEQUALS, p.parseInfixExpression)
+	p.addInfix(token.REF_EQUALS, p.parseInfixExpression)
+	p.addInfix(token.REF_NOTEQUALS, p.parseInfixExpression)
+	p.addInfix(token.VAL_EQUALS, p.parseInfixExpression)
+	p.addInfix(token.VAL_NOTEQUALS, p.parseInfixExpression)
 	p.addInfix(token.LESSTHAN, p.parseInfixExpression)
 	p.addInfix(token.GREATERTHAN, p.parseInfixExpression)
 	p.addInfix(token.LBRACKET, p.parseIndexExpression)
@@ -108,6 +112,7 @@ func (p *Parser) noInfixParseFnError(t token.TokenType) {
 
 /* PRECEDENCE MANAGEMENT */
 
+// Peeks Precedence of next token
 func (p *Parser) peekPrecedence() int {
 	if p, ok := precedences[p.peekToken.Type]; ok {
 		return p
@@ -115,6 +120,7 @@ func (p *Parser) peekPrecedence() int {
 	return LOWEST
 }
 
+// Peeks Precedence of current token
 func (p *Parser) currPrecedence() int {
 	if p, ok := precedences[p.currentToken.Type]; ok {
 		return p
@@ -124,21 +130,25 @@ func (p *Parser) currPrecedence() int {
 
 /* TOKEN NAVIGATION */
 
+// Updates token pointers
 func (p *Parser) nextToken() {
 	p.currentToken = p.peekToken
 	p.peekToken = p.tokenizer.NextToken()
 }
 
+// Returns true if current token type matches argument
 func (p *Parser) checkIdCurrentToken(toCheck token.TokenType) bool {
 	return p.currentToken.Type == toCheck
 }
 
+// Returns true if next token type matches argument
 func (p *Parser) checkIdNextToken(toCheck token.TokenType) bool {
 	return p.peekToken.Type == toCheck
 }
 
-// Assertion Function: enforce correctness of the order of tokens by checking type of next token
+// Assertion Function: Enforce correctness of the order of tokens by checking type of next token
 // If Matches toCheck, parser moves to next token
+// Throws Error if toCheck is unmatched
 func (p *Parser) peekNextToken(toCheck token.TokenType, strict bool) bool {
 	if p.checkIdNextToken(toCheck) {
 		p.nextToken()
@@ -151,6 +161,7 @@ func (p *Parser) peekNextToken(toCheck token.TokenType, strict bool) bool {
 	}
 }
 
+// Appends an parsing error message to the error array
 func (p *Parser) peekNextTokenError(t token.TokenType) {
 	errMsg := fmt.Sprintf("expected token %s, but got %s", t, p.peekToken.Type)
 	p.errors = append(p.errors, errMsg)
@@ -431,19 +442,24 @@ func (p *Parser) parseStringLiteral() ast.Expression {
 func (p *Parser) parseStatement() ast.Statement {
 	switch p.currentToken.Type {
 	case token.LET:
-		return p.parseLetStatement()
+		return p.parseLetStatement(false)
 	case token.RETURN:
 		return p.parseReturnStatement()
+	case token.IDENTIF: // re-assignment statements
+		if p.peekNextToken(token.ASSIGN, false) {
+			return p.parseLetStatement(true)
+		}
+		fallthrough
 	default:
 		return p.parseExpressionStatement()
 	}
 
 }
 
-func (p *Parser) parseLetStatement() *ast.LetStatement {
+func (p *Parser) parseLetStatement(reassignmentFlag bool) *ast.LetStatement {
 	letStatement := &ast.LetStatement{Token: p.currentToken} // Going to be LET type
 
-	if !p.peekNextToken(token.IDENTIF, true) {
+	if !p.peekNextToken(token.IDENTIF, true) && reassignmentFlag {
 		return nil
 	}
 

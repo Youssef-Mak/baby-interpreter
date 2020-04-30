@@ -315,10 +315,16 @@ func evalInfixExpression(operator string, right object.Object, left object.Objec
 		return evalInfixIntegerExpression(operator, right, left)
 	case left.Type() == object.STRING_OBJ && right.Type() == object.STRING_OBJ:
 		return evalInfixStringExpression(operator, right, left)
-	case operator == "==":
+	case operator == "=&=":
 		return boolToBooleanObject(left == right)
-	case operator == "!=":
+	case operator == "=*=":
+		return boolToBooleanObject(left.Inspect() == right.Inspect())
+	case operator == "!&=":
 		return boolToBooleanObject(left != right)
+	case operator == "!*=":
+		return boolToBooleanObject(left.Inspect() != right.Inspect())
+	case operator == "!=":
+		return boolToBooleanObject(left.Inspect() != right.Inspect())
 	case left.Type() != right.Type():
 		return newError("type mismatch: %s %s %s",
 			left.Type(), operator, right.Type())
