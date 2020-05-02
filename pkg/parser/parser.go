@@ -2,10 +2,11 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/Youssef-Mak/baby-interpreter/pkg/ast"
 	"github.com/Youssef-Mak/baby-interpreter/pkg/token"
 	"github.com/Youssef-Mak/baby-interpreter/pkg/tokenizer"
-	"strconv"
 )
 
 const (
@@ -162,7 +163,7 @@ func (p *Parser) peekNextToken(toCheck token.TokenType, strict bool) bool {
 }
 
 // Appends an parsing error message to the error array
-func (p *Parser) peekNextTokenError(t token.TokenType) {
+func (p *Parser) peekNextTokenError(t ...token.TokenType) {
 	errMsg := fmt.Sprintf("expected token %s, but got %s", t, p.peekToken.Type)
 	p.errors = append(p.errors, errMsg)
 }
@@ -442,12 +443,13 @@ func (p *Parser) parseStringLiteral() ast.Expression {
 func (p *Parser) parseStatement() ast.Statement {
 	switch p.currentToken.Type {
 	case token.LET:
-		return p.parseLetStatement(false)
+		return p.parseAssignmentStatement(false)
 	case token.RETURN:
 		return p.parseReturnStatement()
 	case token.IDENTIF: // re-assignment statements
-		if p.peekNextToken(token.ASSIGN, false) {
-			return p.parseLetStatement(true)
+		// TODO: checkIdNextToken should be a variadic function for cleaner code
+		if p.checkIdNextToken(token.ASSIGN) || p.checkIdNextToken(token.REF_ASSIGN) || p.checkIdNextToken(token.VAL_ASSIGN) {
+			return p.parseAssignmentStatement(true)
 		}
 		fallthrough
 	default:
@@ -456,30 +458,40 @@ func (p *Parser) parseStatement() ast.Statement {
 
 }
 
-func (p *Parser) parseLetStatement(reassignmentFlag bool) *ast.LetStatement {
-	letStatement := &ast.LetStatement{Token: p.currentToken} // Going to be LET type
-
-	if !p.peekNextToken(token.IDENTIF, true) && reassignmentFlag {
-		return nil
+func (p *Parser) parseAssignmentStatement(reassignmentFlag bool) *ast.AssignmentStatement {
+	assStatement := &ast.AssignmentStatement{}
+	assStatement.Token = token.Token{Type: token.LET, Literal: "let"}
+	if !reassignmentFlag {
+		assStatement.Token = p.currentToken // Going to be LET type
+		if !p.peekNextToken(token.IDENTIF, true) {
+			return nil
+		}
 	}
 
 	// There is an Identifier i.e is of form '''let <identifier> <...>'''
-	letStatement.Name = &ast.Identifier{Token: p.currentToken, Value: p.currentToken.Literal}
+	assStatement.Name = &ast.Identifier{Token: p.currentToken, Value: p.currentToken.Literal}
 
-	if !p.peekNextToken(token.ASSIGN, true) {
+	assignmentFlag := false
+	if p.peekNextToken(token.ASSIGN, false) || p.peekNextToken(token.REF_ASSIGN, false) || p.peekNextToken(token.VAL_ASSIGN, false) {
+		assStatement.AssignmentOperator = p.currentToken
+		assignmentFlag = true
+	}
+
+	if !assignmentFlag {
+		p.peekNextTokenError(token.ASSIGN, token.REF_ASSIGN, token.VAL_ASSIGN)
 		return nil
 	}
 
 	p.nextToken()
 
-	letStatement.Value = p.parseExpression(LOWEST)
+	assStatement.Value = p.parseExpression(LOWEST)
 
 	for !p.checkIdCurrentToken(token.SEMICOLON) {
 		p.nextToken()
 	}
 
 	// Its of form '''let <identifier> = <...>'''
-	return letStatement
+	return assStatement
 }
 
 func (p *Parser) parseReturnStatement() *ast.ReturnStatement {

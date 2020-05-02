@@ -2,10 +2,11 @@ package tests
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/Youssef-Mak/baby-interpreter/pkg/ast"
 	"github.com/Youssef-Mak/baby-interpreter/pkg/parser"
 	"github.com/Youssef-Mak/baby-interpreter/pkg/tokenizer"
-	"testing"
 )
 
 func testLet(t *testing.T, s ast.Statement, name string) bool {
@@ -13,7 +14,7 @@ func testLet(t *testing.T, s ast.Statement, name string) bool {
 		t.Errorf("s.TokenLiteral not 'let'. got=%q", s.TokenLiteral())
 		return false
 	}
-	letStmt, ok := s.(*ast.LetStatement)
+	letStmt, ok := s.(*ast.AssignmentStatement)
 	if !ok {
 		t.Errorf("s not *ast.LetStatement. got=%T", s)
 		return false
@@ -804,7 +805,7 @@ func TestLetStatements(t *testing.T) {
 		if !testLet(t, stmt, tt.expectedIdentifier) {
 			return
 		}
-		val := stmt.(*ast.LetStatement).Value
+		val := stmt.(*ast.AssignmentStatement).Value
 		if !testLiteralExpression(t, val, tt.expectedValue) {
 			return
 		}

@@ -1,8 +1,9 @@
 package tokenizer
 
 import (
-	"github.com/Youssef-Mak/baby-interpreter/pkg/token"
 	"regexp"
+
+	"github.com/Youssef-Mak/baby-interpreter/pkg/token"
 )
 
 type Tokenizer struct {
@@ -14,10 +15,11 @@ type Tokenizer struct {
 
 func New(input string) *Tokenizer {
 	t := &Tokenizer{input: input}
-	t.readChar()
+	t.readChar() // Initializes Indices
 	return t
 }
 
+// Returns Token based on input at current index(position)
 func (t *Tokenizer) NextToken() token.Token {
 	var tok token.Token
 	t.consumeWhitespace()
@@ -39,7 +41,7 @@ func (t *Tokenizer) NextToken() token.Token {
 				t.readChar()
 				tok = token.Token{Type: token.REF_EQUALS, Literal: "=&="}
 			} else {
-				tok = newToken(token.ILLEGAL, t.ch)
+				tok = token.Token{Type: token.REF_ASSIGN, Literal: "=&"}
 			}
 		case '*':
 			t.readChar()
@@ -47,7 +49,7 @@ func (t *Tokenizer) NextToken() token.Token {
 				t.readChar()
 				tok = token.Token{Type: token.VAL_EQUALS, Literal: "=*="}
 			} else {
-				tok = newToken(token.ILLEGAL, t.ch)
+				tok = token.Token{Type: token.VAL_ASSIGN, Literal: "=*"}
 			}
 		default:
 			tok = newToken(token.ASSIGN, t.ch)
@@ -125,6 +127,7 @@ func (t *Tokenizer) NextToken() token.Token {
 	return tok
 }
 
+// Peeks the next character in input without modifying indexes
 func (t *Tokenizer) peekChar() byte {
 	if t.readPosition > len(t.input) {
 		return 0

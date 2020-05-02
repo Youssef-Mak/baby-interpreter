@@ -1,9 +1,10 @@
 package tests
 
 import (
+	"testing"
+
 	"github.com/Youssef-Mak/baby-interpreter/pkg/token"
 	"github.com/Youssef-Mak/baby-interpreter/pkg/tokenizer"
-	"testing"
 )
 
 func TestSymTokenizer(t *testing.T) {
@@ -67,8 +68,8 @@ if (5 < 10) {
 	return false;
 }
 
-10 == 10;
-10 != 9;
+10 =*= 10;
+10 !*= 9;
 "foobar"
 "foo bar"
 {"hello": "World"}
@@ -132,11 +133,11 @@ if (5 < 10) {
 		{token.SEMICOLON, ";"},
 		{token.RBRACE, "}"},
 		{token.INT, "10"},
-		{token.EQUALS, "=="},
+		{token.VAL_EQUALS, "=*="},
 		{token.INT, "10"},
 		{token.SEMICOLON, ";"},
 		{token.INT, "10"},
-		{token.NOTEQUALS, "!="},
+		{token.VAL_NOTEQUALS, "!*="},
 		{token.INT, "9"},
 		{token.SEMICOLON, ";"},
 		{token.STRING, "foobar"},

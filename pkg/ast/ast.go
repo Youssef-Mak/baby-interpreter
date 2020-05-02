@@ -2,8 +2,9 @@ package ast
 
 import (
 	"bytes"
-	"github.com/Youssef-Mak/baby-interpreter/pkg/token"
 	"strings"
+
+	"github.com/Youssef-Mak/baby-interpreter/pkg/token"
 )
 
 type Node interface {
@@ -45,23 +46,24 @@ func (p *Program) String() string {
 }
 
 // LET STATEMENT -> "let <identifier> = <expression>;"
-type LetStatement struct {
-	Token token.Token // token.LET
-	Name  *Identifier
-	Value Expression
+type AssignmentStatement struct {
+	Token              token.Token // token.LET
+	AssignmentOperator token.Token
+	Name               *Identifier
+	Value              Expression
 }
 
-func (lStatement *LetStatement) statementNode()       {}
-func (lStatement *LetStatement) TokenLiteral() string { return lStatement.Token.Literal }
-func (lStatement *LetStatement) String() string {
+func (aStatement *AssignmentStatement) statementNode()       {}
+func (aStatement *AssignmentStatement) TokenLiteral() string { return aStatement.Token.Literal }
+func (aStatement *AssignmentStatement) String() string {
 	var out bytes.Buffer
 
-	out.WriteString(lStatement.TokenLiteral() + " ")
-	out.WriteString(lStatement.Name.String())
-	out.WriteString(" = ")
+	out.WriteString(aStatement.TokenLiteral() + " ")
+	out.WriteString(aStatement.Name.String())
+	out.WriteString(aStatement.AssignmentOperator.Literal)
 
-	if lStatement.Value != nil {
-		out.WriteString(lStatement.Value.String())
+	if aStatement.Value != nil {
+		out.WriteString(aStatement.Value.String())
 	}
 
 	out.WriteString(";")

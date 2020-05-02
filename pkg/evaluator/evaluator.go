@@ -2,6 +2,7 @@ package evaluator
 
 import (
 	"fmt"
+
 	"github.com/Youssef-Mak/baby-interpreter/pkg/ast"
 	"github.com/Youssef-Mak/baby-interpreter/pkg/object"
 )
@@ -127,12 +128,13 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
 	case *ast.Program:
 		return evalProgram(node.Statements, env)
-	case *ast.LetStatement:
+	case *ast.AssignmentStatement:
+		deepCopyFlag := node.AssignmentOperator.Literal != "=*"
 		val := Eval(node.Value, env)
 		if isError(val) {
 			return val
 		}
-		env.Set(node.Name.Value, val)
+		env.Set(node.Name.Value, val, deepCopyFlag)
 	case *ast.BlockStatement:
 		return evalBlockStatement(node.Statements, env)
 	case *ast.ReturnStatement:
@@ -323,8 +325,6 @@ func evalInfixExpression(operator string, right object.Object, left object.Objec
 		return boolToBooleanObject(left != right)
 	case operator == "!*=":
 		return boolToBooleanObject(left.Inspect() != right.Inspect())
-	case operator == "!=":
-		return boolToBooleanObject(left.Inspect() != right.Inspect())
 	case left.Type() != right.Type():
 		return newError("type mismatch: %s %s %s",
 			left.Type(), operator, right.Type())
@@ -341,9 +341,13 @@ func evalInfixStringExpression(operator string, right object.Object, left object
 	switch operator {
 	case "+":
 		return &object.String{Value: leftVal + rightVal}
-	case "==":
+	case "=*=":
 		return boolToBooleanObject(leftVal == rightVal)
-	case "!=":
+	case "=&=":
+		return boolToBooleanObject(left == right)
+	case "!&=":
+		return boolToBooleanObject(left != right)
+	case "!*=":
 		return boolToBooleanObject(leftVal != rightVal)
 	default:
 		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
@@ -363,8 +367,14 @@ func evalInfixIntegerExpression(operator string, right object.Object, left objec
 		return &object.Integer{Value: leftVal / rightVal}
 	case "*":
 		return &object.Integer{Value: leftVal * rightVal}
-	case "==":
+	case "=*=":
 		return boolToBooleanObject(leftVal == rightVal)
+	case "=&=":
+		return boolToBooleanObject(left == right)
+	case "!&=":
+		return boolToBooleanObject(left != right)
+	case "!*=":
+		return boolToBooleanObject(leftVal != rightVal)
 	case ">":
 		return boolToBooleanObject(leftVal > rightVal)
 	case "<":
@@ -403,7 +413,7 @@ func evalFunctionCall(funcCalled object.Object, args []object.Object) object.Obj
 		}
 		funcScope := object.NewEnclosedEnvironment(funcCalled.Env)
 		for idx, param := range funcCalled.Parameters {
-			funcScope.Set(param.Value, args[idx])
+			funcScope.Set(param.Value, args[idx], false)
 		}
 		evaluatedRes := Eval(funcCalled.Body, funcScope)
 		return unwrapReturnValue(evaluatedRes)
@@ -500,7 +510,7 @@ func evalFunctionLiteral(fun *ast.FunctionLiteral, env *object.Environment) obje
 func evalIdentifier(id *ast.Identifier, env *object.Environment) object.Object {
 	val, ok := env.Get(id.Value)
 	if ok {
-		return val
+		return *val
 	}
 
 	builtin, ok := builtinMap[id.Value]

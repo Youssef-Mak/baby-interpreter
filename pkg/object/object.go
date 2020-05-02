@@ -3,9 +3,10 @@ package object
 import (
 	"bytes"
 	"fmt"
-	"github.com/Youssef-Mak/baby-interpreter/pkg/ast"
 	"hash/fnv"
 	"strings"
+
+	"github.com/Youssef-Mak/baby-interpreter/pkg/ast"
 )
 
 type ObjectType string

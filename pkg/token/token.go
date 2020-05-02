@@ -11,13 +11,15 @@ const (
 	INT     TokenType = "INT"     // 1343456
 	STRING  TokenType = "STRING"  // "Hello World"
 	// Operators
-	ASSIGN  TokenType = "="
-	PLUS    TokenType = "+"
-	MINUS   TokenType = "-"
-	SLASH   TokenType = "/"
-	ASTERIX TokenType = "*"
-	NOT     TokenType = "!"
-	DOT     TokenType = "."
+	ASSIGN     TokenType = "="
+	REF_ASSIGN TokenType = "=&"
+	VAL_ASSIGN TokenType = "=*"
+	PLUS       TokenType = "+"
+	MINUS      TokenType = "-"
+	SLASH      TokenType = "/"
+	ASTERIX    TokenType = "*"
+	NOT        TokenType = "!"
+	DOT        TokenType = "."
 	// Logic
 	LESSTHAN      TokenType = "<"
 	GREATERTHAN   TokenType = ">"
