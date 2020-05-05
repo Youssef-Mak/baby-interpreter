@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/Youssef-Mak/baby-interpreter/pkg/repl"
 	"os"
+
+	"github.com/Youssef-Mak/baby-interpreter/pkg/repl"
 )
 
 const BABY = `
@@ -14,8 +15,10 @@ const BABY = `
 
 func main() {
 
-	fmt.Println("Baby Version 0.0.0")
+	fmt.Println("Baby Version 1.0.0")
 	fmt.Println(BABY)
+
+	fmt.Println("\nTo import a baby file(*.bb) simply input the filename with the .bb extension. (Ex: >> filename.bb)")
 
 	repl.Initialize(os.Stdin, os.Stdout)
 
