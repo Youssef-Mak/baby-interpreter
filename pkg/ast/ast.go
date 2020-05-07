@@ -232,6 +232,25 @@ func (ifexp *IfExpression) String() string {
 	return out.String()
 }
 
+// WHILE EXPRESSION -> "while (<condition>) <consequence> "
+type WhileExpression struct {
+	Token     token.Token // token.WHILE
+	Condition Expression
+	Body      *BlockStatement
+}
+
+func (whileExp *WhileExpression) TokenLiteral() string { return whileExp.Token.Literal }
+func (whileExp *WhileExpression) expressionNode()      {}
+func (whileExp *WhileExpression) String() string {
+	var out bytes.Buffer
+	out.WriteString("while")
+	out.WriteString(whileExp.Condition.String())
+	out.WriteString(" ")
+	out.WriteString(whileExp.Body.String())
+	out.WriteString(" ")
+	return out.String()
+}
+
 // FUNCTION CALL EXPRESSION -> <expression>(<comma seperated expressions>)
 type CallExpression struct {
 	Token     token.Token // token.LPAREN
