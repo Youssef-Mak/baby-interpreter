@@ -80,7 +80,7 @@ not compiled
 
 ## Reserved words
 
-Here are the reserved keywords baby has what Baby has:
+Here are the reserved keywords in Baby:
 
     fun
     let
