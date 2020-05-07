@@ -12,115 +12,234 @@ var (
 	FALSE = &object.Boolean{Value: false}
 	NULL  = &object.Null{}
 )
+var builtinMap map[string]*object.BuiltIn
 
-var builtinMap = map[string]*object.BuiltIn{
-	"len": &object.BuiltIn{
-		Func: func(args ...object.Object) object.Object {
-			if len(args) != 1 {
-				return newError("Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
-					len(args), 1)
-			}
-
-			switch arg := args[0].(type) {
-			case *object.String:
-				return &object.Integer{Value: int64(len(arg.Value))}
-			case *object.Array:
-				return &object.Integer{Value: int64(len(arg.Elements))}
-			default:
-				return newError("argument to `len` not supported, got %s", args[0].Type())
-			}
-		},
-	},
-	"head": &object.BuiltIn{
-		Func: func(args ...object.Object) object.Object {
-			if len(args) != 1 {
-				return newError("Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
-					len(args), 1)
-			}
-
-			switch arg := args[0].(type) {
-			case *object.String:
-				return &object.String{Value: string(arg.Value[0])}
-			case *object.Array:
-				return arg.Elements[0]
-			default:
-				return newError("argument to `head` not supported, got %s", args[0].Type())
-			}
-		},
-	},
-	"tail": &object.BuiltIn{
-		Func: func(args ...object.Object) object.Object {
-			if len(args) != 1 {
-				return newError("Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
-					len(args), 1)
-			}
-
-			switch arg := args[0].(type) {
-			case *object.String:
-				return &object.String{Value: string(arg.Value[len(arg.Value)-1])}
-			case *object.Array:
-				return arg.Elements[len(arg.Elements)-1]
-			default:
-				return newError("argument to `tail` not supported, got %s", args[0].Type())
-			}
-		},
-	},
-	"rest": &object.BuiltIn{
-		Func: func(args ...object.Object) object.Object {
-			if len(args) != 1 {
-				return newError("Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
-					len(args), 1)
-			}
-
-			switch arg := args[0].(type) {
-			case *object.String:
-				if len(arg.Value) > 0 {
-					return &object.String{Value: string(arg.Value[1:len(arg.Value)])}
+func init() {
+	builtinMap = map[string]*object.BuiltIn{
+		"len": { // Return length of array or string
+			Func: func(args ...object.Object) object.Object {
+				if len(args) != 1 {
+					return newError("Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
+						1, len(args))
 				}
-			case *object.Array:
-				length := len(arg.Elements)
-				if length > 0 {
-					newElems := make([]object.Object, length-1, length-1)
-					copy(newElems, arg.Elements[1:len(arg.Elements)])
-					return &object.Array{Elements: newElems}
-				}
-			default:
-				return newError("argument to `tail` not supported, got %s", args[0].Type())
-			}
-			return NULL
-		},
-	},
-	"push": &object.BuiltIn{
-		Func: func(args ...object.Object) object.Object {
-			if len(args) != 2 {
-				return newError("Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
-					len(args), 1)
-			}
 
-			switch arg := args[0].(type) {
-			case *object.Array:
-				length := len(arg.Elements)
-				if length > 0 {
-					newElems := make([]object.Object, length+1, length+1)
+				switch arg := args[0].(type) {
+				case *object.String:
+					return &object.Integer{Value: int64(len(arg.Value))}
+				case *object.Array:
+					return &object.Integer{Value: int64(len(arg.Elements))}
+				default:
+					return newError("argument to `len` not supported, got %s", args[0].Type())
+				}
+			},
+		},
+		"head": { // Return the first element of array or string
+			Func: func(args ...object.Object) object.Object {
+				if len(args) != 1 {
+					return newError("Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
+						1, len(args))
+				}
+
+				switch arg := args[0].(type) {
+				case *object.String:
+					return &object.String{Value: string(arg.Value[0])}
+				case *object.Array:
+					return arg.Elements[0]
+				default:
+					return newError("argument to `head` not supported, got %s", args[0].Type())
+				}
+			},
+		},
+		"tail": { // Return the last element of an array or string
+			Func: func(args ...object.Object) object.Object {
+				if len(args) != 1 {
+					return newError("Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
+						1, len(args))
+				}
+
+				switch arg := args[0].(type) {
+				case *object.String:
+					return &object.String{Value: string(arg.Value[len(arg.Value)-1])}
+				case *object.Array:
+					return arg.Elements[len(arg.Elements)-1]
+				default:
+					return newError("argument to `tail` not supported, got %s", args[0].Type())
+				}
+			},
+		},
+		"isEmpty": { // Returns string or array omitting the first element
+			Func: func(args ...object.Object) object.Object {
+				if len(args) != 1 {
+					return newError("Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
+						1, len(args))
+				}
+				switch arg := args[0].(type) {
+				case *object.String:
+					if len(arg.Value) > 0 {
+						return FALSE
+					} else {
+						return TRUE
+					}
+				case *object.Array:
+					length := len(arg.Elements)
+					if length > 0 {
+						return FALSE
+					} else {
+						return TRUE
+					}
+				default:
+					return newError("argument to `isEmpty` not supported, got %s", args[0].Type())
+				}
+			},
+		},
+		"rest": { // Returns string or array omitting the first element
+			Func: func(args ...object.Object) object.Object {
+				if len(args) != 1 {
+					return newError("Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
+						1, len(args))
+				}
+
+				switch arg := args[0].(type) {
+				case *object.String:
+					if len(arg.Value) > 0 {
+						return &object.String{Value: string(arg.Value[1:len(arg.Value)])}
+					}
+				case *object.Array:
+					length := len(arg.Elements)
+					if length > 0 {
+						newElems := make([]object.Object, length-1, length-1)
+						copy(newElems, arg.Elements[1:len(arg.Elements)])
+						return &object.Array{Elements: newElems}
+					}
+				default:
+					return newError("argument to `rest` not supported, got %s", args[0].Type())
+				}
+				return NULL
+			},
+		},
+		"get": { // Returns Element of Array at passed index
+			Func: func(args ...object.Object) object.Object {
+				if len(args) != 2 {
+					return newError("Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
+						2, len(args))
+				}
+
+				switch arg := args[0].(type) {
+				case *object.Array:
+					length := len(arg.Elements)
+					index, idOk := args[1].(*object.Integer)
+					if length > 0 {
+						if !idOk {
+							return newError("argument to `get` not supported, got %s", args[1].Type())
+						}
+						if index.Value > int64(length-1) {
+							return newError("Array our bounds. Length of Array is %d, index to be accessed is %d", length, index)
+						}
+						return arg.Elements[index.Value]
+					}
+				default:
+					return newError("argument to `get` not supported, got %s", args[0].Type())
+				}
+				return NULL
+			},
+		},
+		"insert": { // Returns Array with element(s) inserted into the index specified
+			Func: func(args ...object.Object) object.Object {
+				if len(args) != 3 {
+					return newError("Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
+						3, len(args))
+				}
+
+				switch arg := args[0].(type) {
+				case *object.Array:
+					length := len(arg.Elements)
+					idx, idxOk := args[2].(*object.Integer)
+					if !idxOk {
+						return newError("arguments to `insert` not supported, expected Integer, got %s", args[2].Type())
+					}
+					if idx.Value > int64(length-1) {
+						return newError("arguments to `insert` not supported, expected Index passed to be equal or less than size of list, got index %d but size of array is %d", idx.Value, length)
+					}
+					toIns := args[1]
+					newElems := make([]object.Object, length, length)
 					copy(newElems, arg.Elements)
-					newElems[length] = args[1]
+					newElems[idx.Value] = toIns
 					return &object.Array{Elements: newElems}
+				default:
+					return newError("argument to `insert` not supported, got %s", args[0].Type())
 				}
-			default:
-				return newError("argument to `tail` not supported, got %s", args[0].Type())
-			}
-			return NULL
+			},
 		},
-	},
-	"print": &object.BuiltIn{
-		Func: func(args ...object.Object) object.Object {
-			for _, arg := range args {
-				fmt.Println(arg.Inspect())
-			}
+		"append": { // Returns Array with element(s) inserted into the end of passed array
+			Func: func(args ...object.Object) object.Object {
+				if len(args) != 2 {
+					return newError("Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
+						2, len(args))
+				}
 
-			return NULL
+				switch arg := args[0].(type) {
+				case *object.Array:
+					length := len(arg.Elements)
+					toAdd, isArr := args[1].(*object.Array)
+					if isArr {
+						newElems := make([]object.Object, length+len(toAdd.Elements), length+len(toAdd.Elements))
+						copy(newElems, arg.Elements)
+						for i, value := range toAdd.Elements {
+							newElems[length+i] = value
+						}
+						return &object.Array{Elements: newElems}
+					} else {
+						newElems := make([]object.Object, length+1, length+1)
+						copy(newElems, arg.Elements)
+						newElems[length] = args[1]
+						return &object.Array{Elements: newElems}
+					}
+				default:
+					intHead, intOk := args[0].(*object.Integer)
+					arrRest, rarrOk := args[1].(*object.Array)
+					// Reverse append(Enqueue edge case)
+					if intOk && rarrOk {
+						length := len(arrRest.Elements)
+						newElems := make([]object.Object, length+1, length+1)
+						newElems[0] = intHead
+						for i, e := range arrRest.Elements {
+							newElems[i+1] = e
+						}
+						return &object.Array{Elements: newElems}
+					}
+					return newError("argument to `append` not supported, got %s", args[0].Type())
+				}
+			},
 		},
-	},
+		"doWhile": { // Calls function returning a boolean until call resolves to false
+			Func: func(args ...object.Object) object.Object {
+				if len(args) > 1 {
+					return newError("Call Arguments and function defined parameters size mismatch.\n Expected %d arguments but got %d parameter(s)",
+						1, len(args))
+				}
+				body, bodyOk := args[0].(*object.Function)
+				if !bodyOk {
+					return newError("arguments to `doWhile` not supported, expected Function, got %s", args[0].Type())
+				}
+				ret := TRUE
+				for ret == TRUE {
+					ret, _ = evalFunctionCall(body, nil).(*object.Boolean)
+				}
+				if ret != TRUE && ret != FALSE {
+					return newError("arguments to `doWhile` not supported, expected Function to return Boolean, got %s", ret.Type())
+				}
+				return ret
+			},
+		},
+		"print": {
+			Func: func(args ...object.Object) object.Object {
+				for _, arg := range args {
+					fmt.Println(arg.Inspect())
+				}
+				return NULL
+			},
+		},
+	}
 }
 
 func Eval(node ast.Node, env *object.Environment) object.Object {
@@ -129,7 +248,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.Program:
 		return evalProgram(node.Statements, env)
 	case *ast.AssignmentStatement:
-		deepCopyFlag := node.AssignmentOperator.Literal != "=*"
+		deepCopyFlag := node.AssignmentOperator.Literal != "=&"
 		val := Eval(node.Value, env)
 		if isError(val) {
 			return val
@@ -193,6 +312,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return evalDotExpression(left, attribute)
 	case *ast.IfExpression:
 		return evalIfExpression(node, env)
+	case *ast.WhileExpression:
+		return evalWhileExpression(node, env)
 	case *ast.FunctionLiteral:
 		return evalFunctionLiteral(node, env)
 	case *ast.Identifier:
@@ -325,6 +446,10 @@ func evalInfixExpression(operator string, right object.Object, left object.Objec
 		return boolToBooleanObject(left != right)
 	case operator == "!*=":
 		return boolToBooleanObject(left.Inspect() != right.Inspect())
+	case operator == "&":
+		return boolToBooleanObject(left == TRUE && right == TRUE)
+	case operator == "|":
+		return boolToBooleanObject(left == TRUE || right == TRUE)
 	case left.Type() != right.Type():
 		return newError("type mismatch: %s %s %s",
 			left.Type(), operator, right.Type())
@@ -400,6 +525,16 @@ func evalIfExpression(ie *ast.IfExpression, env *object.Environment) object.Obje
 	} else {
 		return NULL
 	}
+}
+
+func evalWhileExpression(we *ast.WhileExpression, env *object.Environment) object.Object {
+	condition := Eval(we.Condition, env)
+	ret := object.ReturnValue{Value: NULL}
+	for isTruthy(condition) {
+		ret.Value = Eval(we.Body, env)
+		condition = Eval(we.Condition, env)
+	}
+	return ret.Value
 }
 
 func evalFunctionCall(funcCalled object.Object, args []object.Object) object.Object {

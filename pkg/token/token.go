@@ -23,6 +23,8 @@ const (
 	// Logic
 	LESSTHAN      TokenType = "<"
 	GREATERTHAN   TokenType = ">"
+	LTEQUAL       TokenType = "<="
+	GTEQUAL       TokenType = ">="
 	AND           TokenType = "&"
 	OR            TokenType = "|"
 	REF_EQUALS    TokenType = "=&="
@@ -46,6 +48,7 @@ const (
 	LET      TokenType = "LET"
 	IF       TokenType = "IF"
 	ELSE     TokenType = "ELSE"
+	WHILE    TokenType = "WHILE"
 	RETURN   TokenType = "return"
 )
 
@@ -60,10 +63,11 @@ var valMap = map[string]TokenType{
 }
 
 var keywordMap = map[string]TokenType{
-	"fn":     FUNCTION,
+	"fun":    FUNCTION,
 	"let":    LET,
 	"if":     IF,
 	"else":   ELSE,
+	"while":  WHILE,
 	"return": RETURN,
 }
 

@@ -12,6 +12,7 @@ import (
 const (
 	_ int = iota
 	LOWEST
+	ANDOR       // & or |
 	EQUALS      // ==
 	LESSGREATER // < or >
 	SUM         // +
@@ -23,12 +24,16 @@ const (
 )
 
 var precedences = map[token.TokenType]int{
+	token.AND:           ANDOR,
+	token.OR:            ANDOR,
 	token.REF_EQUALS:    EQUALS,
 	token.VAL_EQUALS:    EQUALS,
 	token.REF_NOTEQUALS: EQUALS,
 	token.VAL_NOTEQUALS: EQUALS,
 	token.LESSTHAN:      LESSGREATER,
 	token.GREATERTHAN:   LESSGREATER,
+	token.LTEQUAL:       LESSGREATER,
+	token.GTEQUAL:       LESSGREATER,
 	token.PLUS:          SUM,
 	token.MINUS:         SUM,
 	token.SLASH:         PRODUCT,
@@ -67,6 +72,7 @@ func New(tokenizer *tokenizer.Tokenizer) *Parser {
 	p.addPrefix(token.LBRACKET, p.parseArrayLiteral)
 	p.addPrefix(token.LBRACE, p.parseHashLiteral)
 	p.addPrefix(token.IF, p.parseIfExpression)
+	p.addPrefix(token.WHILE, p.parseWhileExpression)
 	p.addPrefix(token.FUNCTION, p.parseFunctionLiteral)
 	p.addPrefix(token.NOT, p.parsePrefixOperationExpression)
 	p.addPrefix(token.MINUS, p.parsePrefixOperationExpression)
@@ -76,10 +82,14 @@ func New(tokenizer *tokenizer.Tokenizer) *Parser {
 	p.addInfix(token.MINUS, p.parseInfixExpression)
 	p.addInfix(token.SLASH, p.parseInfixExpression)
 	p.addInfix(token.ASTERIX, p.parseInfixExpression)
+	p.addInfix(token.AND, p.parseInfixExpression)
+	p.addInfix(token.OR, p.parseInfixExpression)
 	p.addInfix(token.REF_EQUALS, p.parseInfixExpression)
 	p.addInfix(token.REF_NOTEQUALS, p.parseInfixExpression)
 	p.addInfix(token.VAL_EQUALS, p.parseInfixExpression)
 	p.addInfix(token.VAL_NOTEQUALS, p.parseInfixExpression)
+	p.addInfix(token.LTEQUAL, p.parseInfixExpression)
+	p.addInfix(token.GTEQUAL, p.parseInfixExpression)
 	p.addInfix(token.LESSTHAN, p.parseInfixExpression)
 	p.addInfix(token.GREATERTHAN, p.parseInfixExpression)
 	p.addInfix(token.LBRACKET, p.parseIndexExpression)
@@ -242,10 +252,34 @@ func (p *Parser) parseGroupExpression() ast.Expression {
 	return exp
 }
 
+func (p *Parser) parseWhileExpression() ast.Expression {
+	expression := &ast.WhileExpression{Token: p.currentToken}
+
+	if !p.peekNextToken(token.LPAREN, true) {
+		return nil
+	}
+
+	p.nextToken()
+	expression.Condition = p.parseExpression(LOWEST)
+
+	if !p.peekNextToken(token.RPAREN, true) {
+		return nil
+	}
+
+	if !p.peekNextToken(token.LBRACE, true) {
+		return nil
+	}
+
+	expression.Body = p.parseBlockStatement()
+
+	return expression
+}
+
 func (p *Parser) parseIfExpression() ast.Expression {
 	expression := &ast.IfExpression{Token: p.currentToken}
 
 	if !p.peekNextToken(token.LPAREN, true) {
+		fmt.Println("HELLO")
 		return nil
 	}
 
@@ -486,7 +520,7 @@ func (p *Parser) parseAssignmentStatement(reassignmentFlag bool) *ast.Assignment
 
 	assStatement.Value = p.parseExpression(LOWEST)
 
-	for !p.checkIdCurrentToken(token.SEMICOLON) {
+	if p.checkIdNextToken(token.SEMICOLON) {
 		p.nextToken()
 	}
 
@@ -501,7 +535,7 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 
 	retStatement.ReturnValue = p.parseExpression(LOWEST)
 
-	for !p.checkIdCurrentToken(token.SEMICOLON) {
+	if p.checkIdNextToken(token.SEMICOLON) {
 		p.nextToken()
 	}
 

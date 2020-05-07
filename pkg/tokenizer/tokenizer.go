@@ -76,9 +76,19 @@ func (t *Tokenizer) NextToken() token.Token {
 			tok = newToken(token.NOT, t.ch)
 		}
 	case '>':
-		tok = newToken(token.GREATERTHAN, t.ch)
+		if t.peekChar() == '=' {
+			t.readChar()
+			tok = token.Token{Type: token.GTEQUAL, Literal: ">="}
+		} else {
+			tok = newToken(token.GREATERTHAN, t.ch)
+		}
 	case '<':
-		tok = newToken(token.LESSTHAN, t.ch)
+		if t.peekChar() == '=' {
+			t.readChar()
+			tok = token.Token{Type: token.LTEQUAL, Literal: "<="}
+		} else {
+			tok = newToken(token.LESSTHAN, t.ch)
+		}
 	case '&':
 		tok = newToken(token.AND, t.ch)
 	case '|':
@@ -183,7 +193,7 @@ func newToken(tokenType token.TokenType, ch byte) token.Token {
 
 // Checks if byte is letter or underscore
 func isLetter(ch byte) bool {
-	match, _ := regexp.Match("[A-Za-z|_]", []byte{ch})
+	match, _ := regexp.Match("[A-Za-z_]", []byte{ch})
 	return match
 }
 
