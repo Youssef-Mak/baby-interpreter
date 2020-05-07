@@ -1,11 +1,12 @@
 package tests
 
 import (
+	"testing"
+
 	"github.com/Youssef-Mak/baby-interpreter/pkg/evaluator"
 	"github.com/Youssef-Mak/baby-interpreter/pkg/object"
 	"github.com/Youssef-Mak/baby-interpreter/pkg/parser"
 	"github.com/Youssef-Mak/baby-interpreter/pkg/tokenizer"
-	"testing"
 )
 
 func testBooleanObject(t *testing.T, obj object.Object, expected bool) bool {
@@ -130,7 +131,7 @@ func TestBuiltinFunctions(t *testing.T) {
 		{`len("four")`, 4},
 		{`len("hello world")`, 11},
 		{`len(1)`, "argument to `len` not supported, got INTEGER"},
-		{`len("one", "two")`, "Call Arguments and function defined parameters size mismatch.\n Expected 2 arguments but got 1 parameter(s)"},
+		{`len("one", "two")`, "Call Arguments and function defined parameters size mismatch.\n Expected 1 arguments but got 2 parameter(s)"},
 	}
 	for _, tt := range tests {
 		evaluated := testEval(tt.input)
@@ -224,6 +225,7 @@ func TestArrayIndexExpressions(t *testing.T) {
 		}
 	}
 }
+
 func TestHashLiterals(t *testing.T) {
 	input := `let two = "two";
 	{
@@ -303,6 +305,7 @@ func TestDotExpressions(t *testing.T) {
 		}
 	}
 }
+
 func TestEvalBooleanExpression(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -310,10 +313,10 @@ func TestEvalBooleanExpression(t *testing.T) {
 	}{
 		{"true", true},
 		{"false", false},
-		{"(1 < 2) == true", true},
-		{"(1 < 2) == false", false},
-		{"(1 > 2) == true", false},
-		{"(1 > 2) == false", true},
+		{"(1 < 2) =*= true", true},
+		{"(1 < 2) =*= false", false},
+		{"(1 > 2) =*= true", false},
+		{"(1 > 2) =*= false", true},
 	}
 	for _, tt := range tests {
 		evaluated := testEval(tt.input)
@@ -388,22 +391,22 @@ func TestLetStatementEval(t *testing.T) {
 }
 
 func TestFunctionObject(t *testing.T) {
-	input := "fn(x) { x + 2; };"
+	input := "fun(x) { x + 2; };"
 	evaluated := testEval(input)
-	fn, ok := evaluated.(*object.Function)
+	fun, ok := evaluated.(*object.Function)
 	if !ok {
 		t.Fatalf("object is not Function. got=%T (%+v)", evaluated, evaluated)
 	}
-	if len(fn.Parameters) != 1 {
+	if len(fun.Parameters) != 1 {
 		t.Fatalf("function has wrong parameters. Parameters=%+v",
-			fn.Parameters)
+			fun.Parameters)
 	}
-	if fn.Parameters[0].String() != "x" {
-		t.Fatalf("parameter is not 'x'. got=%q", fn.Parameters[0])
+	if fun.Parameters[0].String() != "x" {
+		t.Fatalf("parameter is not 'x'. got=%q", fun.Parameters[0])
 	}
 	expectedBody := "(x + 2)"
-	if fn.Body.String() != expectedBody {
-		t.Fatalf("body is not %q. got=%q", expectedBody, fn.Body.String())
+	if fun.Body.String() != expectedBody {
+		t.Fatalf("body is not %q. got=%q", expectedBody, fun.Body.String())
 	}
 }
 
@@ -412,12 +415,12 @@ func TestFunctionApplication(t *testing.T) {
 		input    string
 		expected int64
 	}{
-		{"let identity = fn(x) { x; }; identity(5);", 5},
-		{"let identity = fn(x) { return x; }; identity(5);", 5},
-		{"let double = fn(x) { x * 2; }; double(5);", 10},
-		{"let add = fn(x, y) { x + y; }; add(5, 5);", 10},
-		{"let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20},
-		{"fn(x) { x; }(5)", 5},
+		{"let identity = fun(x) { x; }; identity(5);", 5},
+		{"let identity = fun(x) { return x; }; identity(5);", 5},
+		{"let double = fun(x) { x * 2; }; double(5);", 10},
+		{"let add = fun(x, y) { x + y; }; add(5, 5);", 10},
+		{"let add = fun(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20},
+		{"fun(x) { x; }(5)", 5},
 	}
 	for _, tt := range tests {
 		testIntegerObject(t, testEval(tt.input), tt.expected)
@@ -426,8 +429,8 @@ func TestFunctionApplication(t *testing.T) {
 
 func TestClosures(t *testing.T) {
 	input := `
-	let newAdder = fn(x) {
-	fn(y) { x + y };
+	let newAdder = fun(x) {
+	fun(y) { x + y };
 	};
 	let addTwo = newAdder(2);
 	addTwo(2);`
@@ -465,7 +468,7 @@ func TestErrorHandling(t *testing.T) {
 		},
 		{
 			"foobar",
-			"identifier not found: foobar",
+			"Identifier not Found: foobar",
 		},
 		{
 			`

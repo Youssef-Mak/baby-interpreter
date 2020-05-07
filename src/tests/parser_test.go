@@ -315,11 +315,11 @@ func TestParsingInfixExpressions(t *testing.T) {
 		{"5 / 5;", 5, "/", 5},
 		{"5 > 5;", 5, ">", 5},
 		{"5 < 5;", 5, "<", 5},
-		{"5 == 5;", 5, "==", 5},
-		{"5 != 5;", 5, "!=", 5},
-		{"true == true", true, "==", true},
-		{"true != false", true, "!=", false},
-		{"false == false", false, "==", false},
+		{"5 =*= 5;", 5, "=*=", 5},
+		{"5 !*= 5;", 5, "!*=", 5},
+		{"true =*= true", true, "=*=", true},
+		{"true !*= false", true, "!*=", false},
+		{"false =*= false", false, "=*=", false},
 	}
 	for _, tt := range infixTests {
 		l := tokenizer.New(tt.input)
@@ -428,7 +428,7 @@ func TestBooleanExpression(t *testing.T) {
 }
 
 func TestIfExpression(t *testing.T) {
-	input := `if (x < y) { x }`
+	input := `if (x <= y) { x }`
 	l := tokenizer.New(input)
 	p := parser.New(l)
 	program := p.ParseProgram()
@@ -447,7 +447,7 @@ func TestIfExpression(t *testing.T) {
 		t.Fatalf("stmt.Expression is not ast.IfExpression. got=%T",
 			stmt.Expression)
 	}
-	if !testInfixExpression(t, exp.Condition, "x", "<", "y") {
+	if !testInfixExpression(t, exp.Condition, "x", "<=", "y") {
 		return
 	}
 	if len(exp.Consequence.Statements) != 1 {
@@ -464,6 +464,48 @@ func TestIfExpression(t *testing.T) {
 	}
 	if exp.Alternative != nil {
 		t.Errorf("exp.Alternative.Statements was not nil. got=%+v", exp.Alternative)
+	}
+}
+
+func TestWhileExpression(t *testing.T) {
+	input := `while (x < y) { x=x+1;x }`
+	l := tokenizer.New(input)
+	p := parser.New(l)
+	program := p.ParseProgram()
+	checkErrors(t, p)
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement. got=%T",
+			program.Statements[0])
+	}
+	exp, ok := stmt.Expression.(*ast.WhileExpression)
+	if !ok {
+		t.Fatalf("stmt.Expression is not ast.WhileExpression. got=%T",
+			stmt.Expression)
+	}
+	if !testInfixExpression(t, exp.Condition, "x", "<", "y") {
+		return
+	}
+	if len(exp.Body.Statements) != 2 {
+		t.Errorf("consequence is not 2 statements. got=%d\n",
+			len(exp.Body.Statements))
+	}
+	_, assOk := exp.Body.Statements[0].(*ast.AssignmentStatement)
+	if !assOk {
+		t.Fatalf("Statements[0] is not ast.ExpressionStatement. got=%T",
+			exp.Body.Statements[0])
+	}
+	ret, retOk := exp.Body.Statements[1].(*ast.ExpressionStatement)
+	if !retOk {
+		t.Fatalf("Statements[0] is not ast.ExpressionStatement. got=%T",
+			exp.Body.Statements[0])
+	}
+	if !testIdentifier(t, ret.Expression, "x") {
+		return
 	}
 }
 
@@ -517,7 +559,7 @@ func TestIfElseExpression(t *testing.T) {
 }
 
 func TestFunctionLiteralParsing(t *testing.T) {
-	input := `fn(x, y) { x + y; }`
+	input := `fun(x, y) { x + y; }`
 	l := tokenizer.New(input)
 	p := parser.New(l)
 	program := p.ParseProgram()
@@ -559,9 +601,9 @@ func TestFunctionParameterParsing(t *testing.T) {
 		input          string
 		expectedParams []string
 	}{
-		{input: "fn() {};", expectedParams: []string{}},
-		{input: "fn(x) {};", expectedParams: []string{"x"}},
-		{input: "fn(x, y, z) {};", expectedParams: []string{"x", "y", "z"}},
+		{input: "fun() {};", expectedParams: []string{}},
+		{input: "fun(x) {};", expectedParams: []string{"x"}},
+		{input: "fun(x, y, z) {};", expectedParams: []string{"x", "y", "z"}},
 	}
 	for _, tt := range tests {
 		l := tokenizer.New(tt.input)
@@ -653,16 +695,16 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 			"(3 + 4)((-5) * 6)",
 		},
 		{
-			"5 > 4 == 3 < 4",
-			"((5 > 4) == (3 < 4))",
+			"5 > 4 =*= 3 < 4",
+			"((5 > 4) =*= (3 < 4))",
 		},
 		{
-			"5 < 4 != 3 > 4",
-			"((5 < 4) != (3 > 4))",
+			"5 < 4 !*= 3 > 4",
+			"((5 < 4) !*= (3 > 4))",
 		},
 		{
-			"3 + 4 * 5 == 3 * 1 + 4 * 5",
-			"((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+			"3 + 4 * 5 =*= 3 * 1 + 4 * 5",
+			"((3 + (4 * 5)) =*= ((3 * 1) + (4 * 5)))",
 		},
 		{
 			"true",
@@ -673,12 +715,12 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 			"false",
 		},
 		{
-			"3 > 5 == false",
-			"((3 > 5) == false)",
+			"3 > 5 =*= false",
+			"((3 > 5) =*= false)",
 		},
 		{
-			"3 < 5 == true",
-			"((3 < 5) == true)",
+			"3 < 5 =*= true",
+			"((3 < 5) =*= true)",
 		},
 		{
 			"1 + (2 + 3) + 4",
@@ -697,8 +739,8 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 			"(-(5 + 5))",
 		},
 		{
-			"!(true == true)",
-			"(!(true == true))",
+			"!(true =*= true)",
+			"(!(true =*= true))",
 		},
 		{
 			"a + add(b * c) + d",

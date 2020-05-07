@@ -8,7 +8,7 @@ import (
 )
 
 func TestSymTokenizer(t *testing.T) {
-	input := `,;(}{)+=!-/*5;5 < 10 > 5;[]`
+	input := `,;(}{)+=!-/*5;5 < 10 > 5;[]hesl <= oeojf;>=`
 
 	tests := []struct {
 		expectedType    token.TokenType
@@ -36,6 +36,11 @@ func TestSymTokenizer(t *testing.T) {
 		{token.SEMICOLON, ";"},
 		{token.LBRACKET, "["},
 		{token.RBRACKET, "]"},
+		{token.IDENTIF, "hesl"},
+		{token.LTEQUAL, "<="},
+		{token.IDENTIF, "oeojf"},
+		{token.SEMICOLON, ";"},
+		{token.GTEQUAL, ">="},
 	}
 
 	l := tokenizer.New(input)
@@ -57,7 +62,7 @@ func TestSymTokenizer(t *testing.T) {
 func TestSynTokenizer(t *testing.T) {
 	input := `let five = 5;
 let ten = 10;
-let add = fn(x, y) {
+let add = fun(x, y) {
 x + y;
 };
 let result = add(five, ten);
@@ -68,11 +73,15 @@ if (5 < 10) {
 	return false;
 }
 
+
 10 =*= 10;
 10 !*= 9;
 "foobar"
 "foo bar"
 {"hello": "World"}
+while(3<45) {
+	return true;
+}
 `
 
 	tests := []struct {
@@ -92,7 +101,7 @@ if (5 < 10) {
 		{token.LET, "let"},
 		{token.IDENTIF, "add"},
 		{token.ASSIGN, "="},
-		{token.FUNCTION, "fn"},
+		{token.FUNCTION, "fun"},
 		{token.LPAREN, "("},
 		{token.IDENTIF, "x"},
 		{token.COMMA, ","},
@@ -146,6 +155,17 @@ if (5 < 10) {
 		{token.STRING, "hello"},
 		{token.COLON, ":"},
 		{token.STRING, "World"},
+		{token.RBRACE, "}"},
+		{token.WHILE, "while"},
+		{token.LPAREN, "("},
+		{token.INT, "3"},
+		{token.LESSTHAN, "<"},
+		{token.INT, "45"},
+		{token.RPAREN, ")"},
+		{token.LBRACE, "{"},
+		{token.RETURN, "return"},
+		{token.TRUE, "true"},
+		{token.SEMICOLON, ";"},
 		{token.RBRACE, "}"},
 		{token.EOF, ""},
 	}
